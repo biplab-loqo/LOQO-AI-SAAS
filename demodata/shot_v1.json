@@ -1,0 +1,276 @@
+{
+  "beats": [
+    {
+      "beat_number": 1,
+      "title": "Arrival at Rajmahal Signals a Life Shift",
+      "scene_ref": "EXT. GRAND ROAD / RAJMAHAL OUTER GATE - DAY",
+      "screenplay_lines": [
+        "Ek badi se gadi (Luxury Car) is running on grand road.",
+        "gadi is entering to the grand outer gate of Rajmahal.",
+        "Gadi rajmahal ki main building ke bahar aake rukti hai..."
+      ],
+      "time_range": "0-15",
+      "description": "A luxury arrival establishes status, scale, and the impending change of home and identity.",
+      "emotion": "Anticipation, awe",
+      "shots": [
+        {
+          "shot": "1A",
+          "intent_title": "Status on Wheels",
+          "intent": "Establish the luxury car in motion on the grand road—clean silhouette, centered in vertical frame—communicating wealth and forward momentum toward a life change.",
+          "emotion": "Anticipation, awe",
+          "narrative_function": "Establishing introduction of arrival vehicle and social status; sets tone of opulence.",
+          "estimated_duration": "4s"
+        },
+        {
+          "shot": "1B",
+          "intent_title": "Crossing the Threshold",
+          "intent": "Show the car passing into the massive outer gate of Rajmahal; the gate dominates the frame as the car slips beneath, signaling an irreversible entry into royal space.",
+          "emotion": "Awe, foreboding anticipation",
+          "narrative_function": "Transition beat—visualizes crossing into new world and rules.",
+          "estimated_duration": "5s"
+        },
+        {
+          "shot": "1C",
+          "intent_title": "Arrival Stops Time",
+          "intent": "The car glides to a stop outside the main building; hold on the stillness after motion so the audience feels the weight of the moment before people react.",
+          "emotion": "Suspense, anticipation",
+          "narrative_function": "Button on the arrival; creates a pause that invites the next beat’s scrutiny.",
+          "estimated_duration": "4s"
+        }
+      ]
+    },
+    {
+      "beat_number": 2,
+      "title": "Servants' Gossip: Judgment and Class Tension",
+      "scene_ref": "EXT. RAJMAHAL MAIN BUILDING ENTRANCE - CONTINUOUS",
+      "screenplay_lines": [
+        "sabhi naukar aapas me khusar pusar kar rahe hain….",
+        "NAUKARANI",
+        "Kya sach me rajkumari is gareeb driver se shaadi karengi…",
+        "Sab muh bana rahe hain…",
+        "NAUKAR",
+        "Kya kismat hai uski..seedha road se mahal…",
+        "Sab use dekh kar muh bana rahe hain ..."
+      ],
+      "time_range": "15-35",
+      "description": "The household frames the situation as scandalous, revealing prejudice and social stakes around the marriage.",
+      "emotion": "Judgment, tension, discomfort",
+      "shots": [
+        {
+          "shot": "2A",
+          "intent_title": "Whispers as a Wall",
+          "intent": "Medium close shot of clustered servants in partial profile, whispering (\"sabhi naukar aapas me khusar pusar\"); their heads lean inward, forming a visual barrier of gossip.",
+          "emotion": "Judgment, tension",
+          "narrative_function": "Introduces social chorus; establishes hostile atmosphere at the entrance.",
+          "estimated_duration": "5s"
+        },
+        {
+          "shot": "2B",
+          "intent_title": "The Scandal Spoken",
+          "intent": "Close-up on NAUKARANI delivering: \"Kya sach me rajkumari is gareeb driver se shaadi karengi…\" with a tight, centered frame; background softened to keep her judgment as the focal point.",
+          "emotion": "Disbelief, contempt",
+          "narrative_function": "Explicitly states the class conflict and stakes via dialogue.",
+          "estimated_duration": "4s"
+        },
+        {
+          "shot": "2C",
+          "intent_title": "Faces That Reject",
+          "intent": "Cut to NAUKAR in close-up saying: \"Kya kismat hai uski..seedha road se mahal…\" then linger a beat on nearby servants making faces (\"muh bana rahe hain\")—a synchronized, quiet condemnation.",
+          "emotion": "Discomfort, tension, judgment",
+          "narrative_function": "Reinforces collective prejudice; amplifies pressure on the arriving trio.",
+          "estimated_duration": "6s"
+        }
+      ]
+    },
+    {
+      "beat_number": 3,
+      "title": "Gayatri Enters: Power Move Amid Scrutiny",
+      "scene_ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "screenplay_lines": [
+        "Tabhi car se ek nice dress me gayatri utarti hai..",
+        "Uske peeche Sia aur Pyarelaal bhi utarte hain....."
+      ],
+      "time_range": "35-45",
+      "description": "Gayatri’s presence shifts the energy from rumor to reality; the trio’s arrival invites immediate comparison and judgment.",
+      "emotion": "Control vs. scrutiny",
+      "shots": [
+        {
+          "shot": "3A",
+          "intent_title": "Gayatri Revealed",
+          "intent": "Single-take medium close as the car door opens and Gayatri steps out in a nice dress; a subtle push-in isolates her composure against a minimal palace backdrop.",
+          "emotion": "Control, poise under scrutiny",
+          "narrative_function": "Character entrance—turns gossip into a real confrontation with presence.",
+          "estimated_duration": "5s"
+        },
+        {
+          "shot": "3B",
+          "intent_title": "Family Follows the Queen",
+          "intent": "Wider vertical medium shot: Sia and Pyarelaal exit behind Gayatri in sequence (\"Uske peeche...\"); keep them stacked along the vertical axis to show hierarchy—Gayatri leading, others trailing.",
+          "emotion": "Scrutiny, uneasy formality",
+          "narrative_function": "Defines trio dynamics and invites judgment/comparison visually.",
+          "estimated_duration": "5s"
+        }
+      ]
+    },
+    {
+      "beat_number": 4,
+      "title": "Sia’s Wonder, Gayatri’s Claim: This Is Home Now",
+      "scene_ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "screenplay_lines": [
+        "SIA",
+        "Wow ye rajmahal to filmon wale mahal se bhi bada hai....",
+        "GAYATRI",
+        "Ab yahi tumhara ghar hai...",
+        "SIA",
+        "Sacchi mummy....",
+        "Gayatri smile karti hai use dekh kar...."
+      ],
+      "time_range": "45-65",
+      "description": "Sia reacts with childlike awe; Gayatri emotionally anchors the transition by declaring permanence and offering warmth.",
+      "emotion": "Wonder, reassurance, tenderness",
+      "shots": [
+        {
+          "shot": "4A",
+          "intent_title": "A Child Sees a Kingdom",
+          "intent": "Close-up on Sia looking upward, eyes wide; she says: \"Wow ye rajmahal to filmon wale mahal se bhi bada hai....\" Background becomes abstracted light/architecture so her wonder dominates.",
+          "emotion": "Wonder, awe",
+          "narrative_function": "Humanizes the scale through a child’s POV; softens tension with innocence.",
+          "estimated_duration": "5s"
+        },
+        {
+          "shot": "4B",
+          "intent_title": "Gayatri Stakes the Claim",
+          "intent": "Close-up on Gayatri, calm and firm, delivering: \"Ab yahi tumhara ghar hai...\" A gentle push-in signals emotional authority—this is not just arrival, it’s permanence.",
+          "emotion": "Reassurance, controlled warmth",
+          "narrative_function": "Declares new status quo; anchors identity shift into ‘home’.",
+          "estimated_duration": "4s"
+        },
+        {
+          "shot": "4C",
+          "intent_title": "Proof in a Smile",
+          "intent": "Two-shot (tight medium) of Sia turning back: \"Sacchi mummy....\" then hold as Gayatri smiles at her (\"Gayatri smile karti hai\"); keep servants blurred to protect intimacy amid scrutiny.",
+          "emotion": "Tenderness, relief",
+          "narrative_function": "Emotional payoff; builds bond that contrasts with external judgment.",
+          "estimated_duration": "6s"
+        }
+      ]
+    },
+    {
+      "beat_number": 5,
+      "title": "Public Boundary: Gayatri Keeps Pyarelaal in His Place",
+      "scene_ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "screenplay_lines": [
+        "GAYATRI",
+        "Pyarelaal chalo",
+        "PYARELAAL",
+        "Pyare boliye na..",
+        "Gayatri serious hoti hai",
+        "GAYATRI",
+        "Dekho zyada chipakne ki koshish mat karna... Abhi tak tumne mujhe nahi haraya hai... Wo to baki yoddha tumhe mil kar maar na den isliye maine tumhe select kar liya.... samjhe? Now follow me..."
+      ],
+      "time_range": "65-100",
+      "description": "Pyarelaal seeks affection and status through a nickname; Gayatri shuts it down, asserting dominance and setting strict relational rules.",
+      "emotion": "Humiliation, power imbalance, prickly tension",
+      "shots": [
+        {
+          "shot": "5A",
+          "intent_title": "The Command in Public",
+          "intent": "Medium close on Gayatri, slightly elevated angle for authority, saying: \"Pyarelaal chalo\"—her tone is clipped; servants’ presence is implied as soft shapes at frame edges.",
+          "emotion": "Authority, tension",
+          "narrative_function": "Initiates power exchange; sets Gayatri as the driver of action.",
+          "estimated_duration": "4s"
+        },
+        {
+          "shot": "5B",
+          "intent_title": "He Reaches for ‘Pyare’",
+          "intent": "Close-up on Pyarelaal attempting charm: \"Pyare boliye na..\" His expression leans hopeful but insecure, signaling he wants legitimacy and intimacy in front of others.",
+          "emotion": "Neediness, vulnerability",
+          "narrative_function": "Creates the ask that will be denied; sets up humiliation.",
+          "estimated_duration": "4s"
+        },
+        {
+          "shot": "5C",
+          "intent_title": "Boundary as a Blade",
+          "intent": "Tight close-up on Gayatri turning serious (\"Gayatri serious hoti hai\") delivering: \"Dekho zyada chipakne ki koshish mat karna... Abhi tak tumne mujhe nahi haraya hai... Wo to baki yoddha tumhe mil kar maar na den isliye maine tumhe select kar liya.... samjhe? Now follow me...\" Hold steady—no flourish—letting words land like verdict.",
+          "emotion": "Power imbalance, prickly tension, humiliation",
+          "narrative_function": "Defines relationship rules; asserts dominance; escalates conflict in front of witnesses.",
+          "estimated_duration": "6s"
+        }
+      ]
+    },
+    {
+      "beat_number": 6,
+      "title": "Pyarelaal Left Hanging: The Sting Lands",
+      "scene_ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "screenplay_lines": [
+        "Gayatri bol ke aage badh jati hai....",
+        "pyarelaal muh bana kar khada hai...."
+      ],
+      "time_range": "100-110",
+      "description": "Gayatri exits the exchange decisively, leaving Pyarelaal to absorb the public rejection.",
+      "emotion": "Deflation, resentment",
+      "shots": [
+        {
+          "shot": "6A",
+          "intent_title": "She Walks, He Stays",
+          "intent": "Single-take medium shot: Gayatri turns and walks forward out of frame (\"aage badh jati hai\"), leaving negative space behind her—an intentional emotional abandonment in composition.",
+          "emotion": "Cold finality, deflation",
+          "narrative_function": "Closes the confrontation; shows decisive exit and control of space.",
+          "estimated_duration": "5s"
+        },
+        {
+          "shot": "6B",
+          "intent_title": "Public Aftertaste",
+          "intent": "Close-up on Pyarelaal still standing, making a face (\"muh bana kar khada hai\"); the background hum of the palace/servants stays soft, making his resentment feel trapped inside him.",
+          "emotion": "Resentment, humiliation",
+          "narrative_function": "Reaction beat—lets the sting land and sets up his next behavior toward Sia.",
+          "estimated_duration": "4s"
+        }
+      ]
+    },
+    {
+      "beat_number": 7,
+      "title": "Sia Teases, Pyarelaal Snaps: New Family Friction",
+      "scene_ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "screenplay_lines": [
+        "SIA",
+        "naam to aapka hai pyare.. Par mummy dikha gayi aapko din me taare....",
+        "PYARELAAL",
+        "Haan sab teri wajah se hua hai.. Chuhiya...",
+        "SIA",
+        "Papa chuhiya nahi siya....",
+        "PYARELAAL",
+        "Haan haan chal...."
+      ],
+      "time_range": "110-135",
+      "description": "Sia punctures the tension with humor; Pyarelaal redirects his bruised ego into petty hostility, establishing ongoing domestic conflict.",
+      "emotion": "Comic bite, irritation, simmering antagonism",
+      "shots": [
+        {
+          "shot": "7A",
+          "intent_title": "Sia’s Mischief Cuts the Air",
+          "intent": "Close-up on Sia, playful but pointed, delivering: \"naam to aapka hai pyare.. Par mummy dikha gayi aapko din me taare....\" Her smile carries a child’s boldness; palace remains minimal to keep timing crisp.",
+          "emotion": "Comic bite, cheeky confidence",
+          "narrative_function": "Releases tension with humor; triggers Pyarelaal’s displaced anger.",
+          "estimated_duration": "6s"
+        },
+        {
+          "shot": "7B",
+          "intent_title": "Ego Turns Cruel",
+          "intent": "Close-up on Pyarelaal snapping: \"Haan sab teri wajah se hua hai.. Chuhiya...\" The frame is tight to emphasize pettiness and heat—his humiliation converts into hostility.",
+          "emotion": "Irritation, simmering antagonism",
+          "narrative_function": "Shows emotional redirection; establishes him as volatile within the new family unit.",
+          "estimated_duration": "5s"
+        },
+        {
+          "shot": "7C",
+          "intent_title": "Name Correction, Dismissal",
+          "intent": "Two-shot (tight medium): Sia protests: \"Papa chuhiya nahi siya....\" then Pyarelaal cuts her off: \"Haan haan chal....\" End on Sia’s small deflation as the humor fades into a new friction.",
+          "emotion": "Hurt under humor, irritation",
+          "narrative_function": "Locks in ongoing domestic conflict; ends sequence with a sour relational beat.",
+          "estimated_duration": "6s"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "beats": [
+    {
+      "Beat_Number": 1,
+      "Title": "Arrival at Rajmahal Signals a Life Shift",
+      "Scene_Ref": "EXT. GRAND ROAD / RAJMAHAL OUTER GATE - DAY",
+      "Screenplay_lines": [
+        "Ek badi se gadi (Luxury Car) is running on grand road.",
+        "gadi is entering to the grand outer gate of Rajmahal.",
+        "Gadi rajmahal ki main building ke bahar aake rukti hai..."
+      ],
+      "Time_Range": "0-15",
+      "Description": "A luxury arrival establishes status, scale, and the impending change of home and identity.",
+      "Emotion": "Anticipation, awe"
+    },
+    {
+      "Beat_Number": 2,
+      "Title": "Servants' Gossip: Judgment and Class Tension",
+      "Scene_Ref": "EXT. RAJMAHAL MAIN BUILDING ENTRANCE - CONTINUOUS",
+      "Screenplay_lines": [
+        "sabhi naukar aapas me khusar pusar kar rahe hain….",
+        "NAUKARANI",
+        "Kya sach me rajkumari is gareeb driver se shaadi karengi…",
+        "Sab muh bana rahe hain…",
+        "NAUKAR",
+        "Kya kismat hai uski..seedha road se mahal…",
+        "Sab use dekh kar muh bana rahe hain ..."
+      ],
+      "Time_Range": "15-35",
+      "Description": "The household frames the situation as scandalous, revealing prejudice and social stakes around the marriage.",
+      "Emotion": "Judgment, tension, discomfort"
+    },
+    {
+      "Beat_Number": 3,
+      "Title": "Gayatri Enters: Power Move Amid Scrutiny",
+      "Scene_Ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "Screenplay_lines": [
+        "Tabhi car se ek nice dress me gayatri utarti hai..",
+        "Uske peeche Sia aur Pyarelaal bhi utarte hain....."
+      ],
+      "Time_Range": "35-45",
+      "Description": "Gayatri’s presence shifts the energy from rumor to reality; the trio’s arrival invites immediate comparison and judgment.",
+      "Emotion": "Control vs. scrutiny"
+    },
+    {
+      "Beat_Number": 4,
+      "Title": "Sia’s Wonder, Gayatri’s Claim: This Is Home Now",
+      "Scene_Ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "Screenplay_lines": [
+        "SIA",
+        "Wow ye rajmahal to filmon wale mahal se bhi bada hai....",
+        "GAYATRI",
+        "Ab yahi tumhara ghar hai...",
+        "SIA",
+        "Sacchi mummy....",
+        "Gayatri smile karti hai use dekh kar...."
+      ],
+      "Time_Range": "45-65",
+      "Description": "Sia reacts with childlike awe; Gayatri emotionally anchors the transition by declaring permanence and offering warmth.",
+      "Emotion": "Wonder, reassurance, tenderness"
+    },
+    {
+      "Beat_Number": 5,
+      "Title": "Public Boundary: Gayatri Keeps Pyarelaal in His Place",
+      "Scene_Ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "Screenplay_lines": [
+        "GAYATRI",
+        "Pyarelaal chalo",
+        "PYARELAAL",
+        "Pyare boliye na..",
+        "Gayatri serious hoti hai",
+        "GAYATRI",
+        "Dekho zyada chipakne ki koshish mat karna... Abhi tak tumne mujhe nahi haraya hai... Wo to baki yoddha tumhe mil kar maar na den isliye maine tumhe select kar liya.... samjhe? Now follow me..."
+      ],
+      "Time_Range": "65-100",
+      "Description": "Pyarelaal seeks affection and status through a nickname; Gayatri shuts it down, asserting dominance and setting strict relational rules.",
+      "Emotion": "Humiliation, power imbalance, prickly tension"
+    },
+    {
+      "Beat_Number": 6,
+      "Title": "Pyarelaal Left Hanging: The Sting Lands",
+      "Scene_Ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "Screenplay_lines": [
+        "Gayatri bol ke aage badh jati hai....",
+        "pyarelaal muh bana kar khada hai...."
+      ],
+      "Time_Range": "100-110",
+      "Description": "Gayatri exits the exchange decisively, leaving Pyarelaal to absorb the public rejection.",
+      "Emotion": "Deflation, resentment"
+    },
+    {
+      "Beat_Number": 7,
+      "Title": "Sia Teases, Pyarelaal Snaps: New Family Friction",
+      "Scene_Ref": "EXT. RAJMAHAL ENTRANCE - CONTINUOUS",
+      "Screenplay_lines": [
+        "SIA",
+        "naam to aapka hai pyare.. Par mummy dikha gayi aapko din me taare....",
+        "PYARELAAL",
+        "Haan sab teri wajah se hua hai.. Chuhiya...",
+        "SIA",
+        "Papa chuhiya nahi siya....",
+        "PYARELAAL",
+        "Haan haan chal...."
+      ],
+      "Time_Range": "110-135",
+      "Description": "Sia punctures the tension with humor; Pyarelaal redirects his bruised ego into petty hostility, establishing ongoing domestic conflict.",
+      "Emotion": "Comic bite, irritation, simmering antagonism"
+    }
+  ]
+}

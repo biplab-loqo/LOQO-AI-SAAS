@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+env/
+backend/
+scripts/
+
+# Node
+node_modules/
+.next/
+out/
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Database
+*.db
+*.sqlite
+
+# Local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+
+# Build outputs
+build/
+dist/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Documentation (backend serves static files, not Vercel)
+demodata/
+API_DOCUMENTATION.md
+DEPLOYMENT.md
+DEPLOYMENT_SIMPLIFIED.md
+DEPLOY_CHECKLIST.md
+VERCEL_ENV_SETUP.md
+VERCEL_READY.md
+DEPLOY_NOW.md
+README.md
+
+# Docker
+docker-compose.yml
+Dockerfile

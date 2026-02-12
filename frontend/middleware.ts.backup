@@ -1,0 +1,57 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+// Routes that require authentication
+const protectedRoutes = [
+  '/dashboard',
+  '/project',
+  '/team',
+  '/profile',
+  '/settings',
+]
+
+// Routes that should redirect to dashboard if already logged in
+const authRoutes = ['/auth/login', '/onboarding']
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  
+  // Skip middleware for backend routes entirely
+  if (
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/static') ||
+    pathname.startsWith('/health') ||
+    pathname.startsWith('/docs') ||
+    pathname.startsWith('/redoc') ||
+    pathname.startsWith('/openapi.json') ||
+    pathname.startsWith('/_next') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next()
+  }
+
+  const token = request.cookies.get('auth_token')?.value
+
+  // Check if the route is protected
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  )
+
+  // If accessing protected route without token, redirect to login
+  if (isProtectedRoute && !token) {
+    const loginUrl = new URL('/auth/login', request.url)
+    loginUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except static files
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+}

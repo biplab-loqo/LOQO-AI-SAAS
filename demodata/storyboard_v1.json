@@ -1,0 +1,751 @@
+{
+  "storyboard": [
+    {
+      "metadata": {
+        "panel_number": 1,
+        "beat_number": 1,
+        "shot_summary": "Luxury car drives along grand road, centered vertically, signaling wealth and an impending life shift."
+      },
+      "cinematography": {
+        "shot_size_angle": "MS front",
+        "lens_intent": "35mm",
+        "camera_movement": "Slow follow"
+      },
+      "composition": {
+        "subject_composition": "Luxury car centered, vertical leading lines of grand road, forward-facing silhouette.",
+        "action": "Luxury car moves steadily forward on the grand road."
+      },
+      "setting": {
+        "key_location": "Grand Approach Road to Rajmahal",
+        "scenography": "Front-center MS, slight low angle, 35mm, grand road background",
+        "time_context": "Daylight, clear atmosphere"
+      },
+      "character_focal_position": null,
+      "characters": [],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal estate approach road",
+        "emotional_thematic_intent": "Anticipation and awe build toward entering royal space."
+      },
+      "audio": {
+        "dialogue": "NA",
+        "audio_cue_intent": "Low cinematic swell, distant road ambience, controlled momentum."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 2,
+        "beat_number": 1,
+        "shot_summary": "Car passes under the massive outer gate, gate dominating frame to mark an irreversible threshold."
+      },
+      "cinematography": {
+        "shot_size_angle": "WS low",
+        "lens_intent": "24mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Massive outer gate fills top frame; car small at bottom, centered entry.",
+        "action": "Luxury car drives through the massive outer gate into the estate."
+      },
+      "setting": {
+        "key_location": "Rajmahal Massive Outer Gate",
+        "scenography": "Front-center WS, low angle, 24mm, massive outer gate background",
+        "time_context": "Daylight, hard highlights"
+      },
+      "character_focal_position": null,
+      "characters": [],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal estate monumental entrance",
+        "emotional_thematic_intent": "Awe and foreboding as the new world claims them."
+      },
+      "audio": {
+        "dialogue": "NA",
+        "audio_cue_intent": "Gate-scale reverb, car glide, music tightens subtly."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 3,
+        "beat_number": 1,
+        "shot_summary": "Car glides to a stop outside main palace building, holding stillness to let tension settle."
+      },
+      "cinematography": {
+        "shot_size_angle": "MS front",
+        "lens_intent": "35mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Car centered lower frame; main palace building exterior softened behind, vertical symmetry.",
+        "action": "Luxury car slows and stops outside the main palace building exterior."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center MS, eye level, 35mm, main palace building exterior background",
+        "time_context": "Daylight, tense quiet"
+      },
+      "character_focal_position": null,
+      "characters": [],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace arrival forecourt",
+        "emotional_thematic_intent": "Suspense and anticipation in the silence after motion."
+      },
+      "audio": {
+        "dialogue": "NA",
+        "audio_cue_intent": "Car engine fade, brief hush, distant estate ambience."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 4,
+        "beat_number": 2,
+        "shot_summary": "Clustered servants whisper in partial profile, forming a gossip wall at the palace entrance."
+      },
+      "cinematography": {
+        "shot_size_angle": "MCU side",
+        "lens_intent": "50mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Two servants dominate center-left; heads leaned inward, blurred main palace building exterior behind.",
+        "action": "Servants lean close and whisper to each other, eyes cutting toward the arrival."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Left 45 MCU, eye level, 50mm, main palace building exterior background",
+        "time_context": "Daylight, watchful tension"
+      },
+      "character_focal_position": "Foreground servants, center-left cluster"
+      ,
+      "characters": [
+        {
+          "character_name": "NAUKARANI",
+          "character_visual_identity": "Female early 20s, slim, stern eyes, low bun."
+        },
+        {
+          "character_name": "NAUKAR",
+          "character_visual_identity": "Male late 20s, slim, curly hair, trimmed beard."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace entrance culture",
+        "emotional_thematic_intent": "Judgment and class tension gather before the family appears."
+      },
+      "audio": {
+        "dialogue": "NA",
+        "audio_cue_intent": "Soft murmurs, hushed breath, faint fabric rustle."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 5,
+        "beat_number": 2,
+        "shot_summary": "Close-up of NAUKARANI delivering scandal line, her contempt isolated against softened palace background."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU front",
+        "lens_intent": "85mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "NAUKARANI centered, face fills frame, sharp eyes forward; background fully softened.",
+        "action": "NAUKARANI speaks the judgmental question with a stern, disbelieving expression."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, eye level, 85mm, main palace building exterior background",
+        "time_context": "Daylight, hushed scrutiny"
+      },
+      "character_focal_position": "NAUKARANI centered close-up"
+      ,
+      "characters": [
+        {
+          "character_name": "NAUKARANI",
+          "character_visual_identity": "Female early 20s, slim, medium-light brown skin, low bun."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal household servant hierarchy",
+        "emotional_thematic_intent": "Contempt verbalizes the class conflict openly and sharply."
+      },
+      "audio": {
+        "dialogue": "Kya sach me rajkumari is gareeb driver se shaadi karengi…",
+        "audio_cue_intent": "Dialogue dry and close, murmurs drop under it."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 6,
+        "beat_number": 2,
+        "shot_summary": "Close-up NAUKAR comments on luck, then nearby servants’ rejecting faces linger in silence."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU front",
+        "lens_intent": "85mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "NAUKAR centered; edges hold blurred servant faces, all oriented toward arrival.",
+        "action": "NAUKAR speaks, then holds as nearby servants make disapproving faces."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, eye level, 85mm, main palace building exterior background",
+        "time_context": "Daylight, quiet condemnation"
+      },
+      "character_focal_position": "NAUKAR centered; others blurred at edges"
+      ,
+      "characters": [
+        {
+          "character_name": "NAUKAR",
+          "character_visual_identity": "Male late 20s, slim, medium-brown skin, trimmed beard."
+        },
+        {
+          "character_name": "NAUKARANI",
+          "character_visual_identity": "Female early 20s, slim, stern expression, low bun."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace entrance scrutiny",
+        "emotional_thematic_intent": "Collective prejudice tightens, turning whispers into rejection."
+      },
+      "audio": {
+        "dialogue": "Kya kismat hai uski..seedha road se mahal…",
+        "audio_cue_intent": "Close dialogue, then faint scoffs and restrained murmurs."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 7,
+        "beat_number": 3,
+        "shot_summary": "Car door opens and Gayatri steps out, push-in isolates her poise against minimal palace backdrop."
+      },
+      "cinematography": {
+        "shot_size_angle": "MCU front",
+        "lens_intent": "50mm",
+        "camera_movement": "Slow push"
+      },
+      "composition": {
+        "subject_composition": "Gayatri centered, framed mid-torso up, facing forward; car edge only minimal.",
+        "action": "Gayatri steps out of the luxury car, composed and controlled."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center MCU, eye level, 50mm, main palace building exterior background",
+        "time_context": "Daylight, tension peaks"
+      },
+      "character_focal_position": "Gayatri centered, dominant vertical anchor"
+      ,
+      "characters": [
+        {
+          "character_name": "GAYATRI",
+          "character_visual_identity": "Female late 20s, tall, warm brown skin, sleek tied hair."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace forecourt arrival",
+        "emotional_thematic_intent": "Control and poise confront scrutiny without flinching."
+      },
+      "audio": {
+        "dialogue": "NA",
+        "audio_cue_intent": "Music steadies, fabric movement, distant murmurs held back."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 8,
+        "beat_number": 3,
+        "shot_summary": "Sia and Pyarelaal exit behind Gayatri, stacked vertically to show hierarchy and unease."
+      },
+      "cinematography": {
+        "shot_size_angle": "MS front",
+        "lens_intent": "35mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Gayatri top-center foreground; Sia mid; Pyarelaal lower, all facing forward.",
+        "action": "Sia and Pyarelaal step out behind Gayatri in sequence."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center MS, eye level, 35mm, main palace building exterior background",
+        "time_context": "Daylight, public scrutiny"
+      },
+      "character_focal_position": "Gayatri foreground; Sia and Pyarelaal aligned behind"
+      ,
+      "characters": [
+        {
+          "character_name": "GAYATRI",
+          "character_visual_identity": "Female late 20s, tall, elegant face, calm eyes."
+        },
+        {
+          "character_name": "SIA",
+          "character_visual_identity": "Girl 8, petite, bright eyes, hair tied back."
+        },
+        {
+          "character_name": "PYARELAAL",
+          "character_visual_identity": "Male late 20s, athletic, wavy hair, light stubble."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace arrival staging",
+        "emotional_thematic_intent": "Uneasy formality as the trio becomes the judged spectacle."
+      },
+      "audio": {
+        "dialogue": "NA",
+        "audio_cue_intent": "Footsteps on stone, murmurs swell then restrain."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 9,
+        "beat_number": 4,
+        "shot_summary": "Close-up Sia looks upward, eyes wide, voicing wonder at the sheer size of Rajmahal."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU low",
+        "lens_intent": "85mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Sia centered, chin tilted up, eyes wide; background abstracted architecture light.",
+        "action": "Sia gazes upward and speaks with open awe."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, slight low angle, 85mm, main palace building exterior background",
+        "time_context": "Daylight, glowing highlights"
+      },
+      "character_focal_position": "Sia centered close-up looking up"
+      ,
+      "characters": [
+        {
+          "character_name": "SIA",
+          "character_visual_identity": "Girl 8, light-brown skin, round face, sweet smile."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace exterior grandeur",
+        "emotional_thematic_intent": "Childhood wonder reframes opulence as magical and new."
+      },
+      "audio": {
+        "dialogue": "Wow ye rajmahal to filmon wale mahal se bhi bada hai....",
+        "audio_cue_intent": "Light music lift, soft air tone, wonder emphasized."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 10,
+        "beat_number": 4,
+        "shot_summary": "Close-up Gayatri calmly declares permanence: this palace is now Sia’s home, authority softened by warmth."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU front",
+        "lens_intent": "85mm",
+        "camera_movement": "Slow push"
+      },
+      "composition": {
+        "subject_composition": "Gayatri centered, steady gaze downward toward Sia, dupatta framing face, thirds balanced.",
+        "action": "Gayatri speaks gently but firmly, claiming the palace as home."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, eye level, 85mm, main palace building exterior background",
+        "time_context": "Daylight, intimate calm"
+      },
+      "character_focal_position": "Gayatri centered close-up, calm authority"
+      ,
+      "characters": [
+        {
+          "character_name": "GAYATRI",
+          "character_visual_identity": "Female late 20s, warm brown skin, poised stance, sleek tied hair."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace arrival forecourt",
+        "emotional_thematic_intent": "Reassurance sets new status quo: belonging declared, not requested."
+      },
+      "audio": {
+        "dialogue": "Ab yahi tumhara ghar hai...",
+        "audio_cue_intent": "Voice close and steady, music warm but controlled."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 11,
+        "beat_number": 4,
+        "shot_summary": "Tight two-shot: Sia turns back asking ‘Sacchi’, Gayatri smiles, servants kept blurred for privacy."
+      },
+      "cinematography": {
+        "shot_size_angle": "2S tight",
+        "lens_intent": "50mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Sia lower-center turned toward Gayatri; Gayatri upper-center, facing Sia; shallow background.",
+        "action": "Sia asks; Gayatri answers with a warm smile, holding their bond."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center tight 2S, eye level, 50mm, main palace building exterior background",
+        "time_context": "Daylight, tender pause"
+      },
+      "character_focal_position": "Sia foreground lower; Gayatri just behind, centered"
+      ,
+      "characters": [
+        {
+          "character_name": "SIA",
+          "character_visual_identity": "Girl 8, petite, bright eyes, hair tied back."
+        },
+        {
+          "character_name": "GAYATRI",
+          "character_visual_identity": "Female late 20s, tall, elegant face, calm eyes."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace entrance under scrutiny",
+        "emotional_thematic_intent": "Tenderness and relief bloom inside a hostile public space."
+      },
+      "audio": {
+        "dialogue": "Sacchi mummy....",
+        "audio_cue_intent": "Soft breathy intimacy, murmurs distant and unfocused."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 12,
+        "beat_number": 5,
+        "shot_summary": "Gayatri issues a clipped public command to Pyarelaal, framed slightly elevated to emphasize authority."
+      },
+      "cinematography": {
+        "shot_size_angle": "MCU high",
+        "lens_intent": "50mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Gayatri centered, slightly below camera, looking forward; blurred servant shapes at edges.",
+        "action": "Gayatri commands Pyarelaal to come along, without softness."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center MCU, slight high angle, 50mm, main palace building exterior background",
+        "time_context": "Daylight, brittle tension"
+      },
+      "character_focal_position": "Gayatri centered, authoritative angle"
+      ,
+      "characters": [
+        {
+          "character_name": "GAYATRI",
+          "character_visual_identity": "Female late 20s, tall, poised stance, gold jewelry."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace public entrance",
+        "emotional_thematic_intent": "Power dynamics harden as she controls him publicly."
+      },
+      "audio": {
+        "dialogue": "Pyarelaal chalo",
+        "audio_cue_intent": "Command cuts through ambience; music tightens slightly."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 13,
+        "beat_number": 5,
+        "shot_summary": "Close-up Pyarelaal tries charm, asking to be called ‘Pyare’, hope masking insecurity."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU front",
+        "lens_intent": "85mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Pyarelaal centered close, eyes lifted toward Gayatri off-frame, face tense but hopeful.",
+        "action": "Pyarelaal asks for the nickname, attempting intimacy in public."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, eye level, 85mm, main palace building exterior background",
+        "time_context": "Daylight, exposed vulnerability"
+      },
+      "character_focal_position": "Pyarelaal centered close-up"
+      ,
+      "characters": [
+        {
+          "character_name": "PYARELAAL",
+          "character_visual_identity": "Male late 20s, fair-medium skin, wavy hair, light stubble."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace social hierarchy pressure",
+        "emotional_thematic_intent": "Neediness surfaces as he seeks status and affection."
+      },
+      "audio": {
+        "dialogue": "Pyare boliye na..",
+        "audio_cue_intent": "Voice soft, slightly strained; background murmurs faint."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 14,
+        "beat_number": 5,
+        "shot_summary": "Tight close-up Gayatri turns serious and delivers a cutting boundary, words landing like a verdict."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU front",
+        "lens_intent": "85mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Gayatri centered, face steady and stern, eyes fixed forward; shallow background isolates impact.",
+        "action": "Gayatri warns him not to cling and orders him to follow."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, eye level, 85mm, main palace building exterior background",
+        "time_context": "Daylight, cold clarity"
+      },
+      "character_focal_position": "Gayatri centered close-up, serious"
+      ,
+      "characters": [
+        {
+          "character_name": "GAYATRI",
+          "character_visual_identity": "Female late 20s, warm brown skin, calm eyes, sleek tied hair."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace public power dynamic",
+        "emotional_thematic_intent": "Humiliation and dominance define the relationship rules."
+      },
+      "audio": {
+        "dialogue": "Dekho zyada chipakne ki koshish mat karna... Abhi tak tumne mujhe nahi haraya hai... Wo to baki yoddha tumhe mil kar maar na den isliye maine tumhe select kar liya.... samjhe? Now follow me...",
+        "audio_cue_intent": "Dialogue sharp and dry; music drops to tension."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 15,
+        "beat_number": 6,
+        "shot_summary": "Medium shot: Gayatri walks forward out of frame, leaving negative space that visually abandons Pyarelaal."
+      },
+      "cinematography": {
+        "shot_size_angle": "MS rear",
+        "lens_intent": "35mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Gayatri centered then exits upward; empty space remains; palace exterior softly present.",
+        "action": "Gayatri turns and walks ahead, exiting the frame decisively."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Back-center MS, eye level, 35mm, main palace building exterior background",
+        "time_context": "Daylight, clipped finality"
+      },
+      "character_focal_position": "Gayatri exits frame, leaving center empty"
+      ,
+      "characters": [
+        {
+          "character_name": "GAYATRI",
+          "character_visual_identity": "Female late 20s, tall, poised stance, dupatta."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace forecourt confrontation space",
+        "emotional_thematic_intent": "Cold finality: she controls space and ends the exchange."
+      },
+      "audio": {
+        "dialogue": "NA",
+        "audio_cue_intent": "Footsteps recede; ambience returns; tension sustains."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 16,
+        "beat_number": 6,
+        "shot_summary": "Close-up Pyarelaal stands making a resentful face, humiliation trapped while the palace hum blurs behind."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU front",
+        "lens_intent": "85mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Pyarelaal centered, jaw tight, eyes narrowed; background soft, vertical frame isolates him.",
+        "action": "Pyarelaal remains still, making a face as rejection sinks in."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, eye level, 85mm, main palace building exterior background",
+        "time_context": "Daylight, bitter silence"
+      },
+      "character_focal_position": "Pyarelaal centered close-up"
+      ,
+      "characters": [
+        {
+          "character_name": "PYARELAAL",
+          "character_visual_identity": "Male late 20s, athletic build, sharp eyes, light stubble."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace entrance social pressure",
+        "emotional_thematic_intent": "Deflation turns to resentment, priming the next family friction."
+      },
+      "audio": {
+        "dialogue": "NA",
+        "audio_cue_intent": "Small inhale, distant murmurs, music holds a low note."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 17,
+        "beat_number": 7,
+        "shot_summary": "Close-up Sia delivers a cheeky rhyme, playful confidence cutting through tension at the entrance."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU front",
+        "lens_intent": "85mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Sia centered, slight grin, eyes angled toward Pyarelaal off-frame; clean background.",
+        "action": "Sia teases Pyarelaal with a mischievous line, enjoying the moment."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, eye level, 85mm, main palace building exterior background",
+        "time_context": "Daylight, playful sting"
+      },
+      "character_focal_position": "Sia centered close-up"
+      ,
+      "characters": [
+        {
+          "character_name": "SIA",
+          "character_visual_identity": "Girl 8, petite, bright eyes, sweet smile, hair tied back."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace forecourt, family under gaze",
+        "emotional_thematic_intent": "Comic bite briefly relieves tension, inviting backlash."
+      },
+      "audio": {
+        "dialogue": "naam to aapka hai pyare.. Par mummy dikha gayi aapko din me taare....",
+        "audio_cue_intent": "Child voice crisp; faint chuckle tone, tension underneath."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 18,
+        "beat_number": 7,
+        "shot_summary": "Close-up Pyarelaal snaps, calling Sia ‘Chuhiya’, irritation and bruised ego turning petty and cruel."
+      },
+      "cinematography": {
+        "shot_size_angle": "CU front",
+        "lens_intent": "85mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Pyarelaal centered tight, brows tense, eyes hard; background blurred to trap heat.",
+        "action": "Pyarelaal retorts sharply, blaming Sia and insulting her."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center CU, eye level, 85mm, main palace building exterior background",
+        "time_context": "Daylight, sudden edge"
+      },
+      "character_focal_position": "Pyarelaal centered close-up"
+      ,
+      "characters": [
+        {
+          "character_name": "PYARELAAL",
+          "character_visual_identity": "Male late 20s, fair-medium skin, wavy hair, sharp eyes."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace entrance, private conflict public",
+        "emotional_thematic_intent": "Simmering antagonism emerges as humiliation redirects toward a child."
+      },
+      "audio": {
+        "dialogue": "Haan sab teri wajah se hua hai.. Chuhiya...",
+        "audio_cue_intent": "Harsh tone close-mic; music tightens, ambience drops."
+      }
+    },
+    {
+      "metadata": {
+        "panel_number": 19,
+        "beat_number": 7,
+        "shot_summary": "Tight two-shot: Sia corrects her name, Pyarelaal dismisses her, ending on Sia’s deflation."
+      },
+      "cinematography": {
+        "shot_size_angle": "2S tight",
+        "lens_intent": "50mm",
+        "camera_movement": "Static"
+      },
+      "composition": {
+        "subject_composition": "Sia lower-center facing Pyarelaal; Pyarelaal upper-center facing Sia; balanced vertical stack.",
+        "action": "Sia protests her name; Pyarelaal dismisses her and ends the exchange."
+      },
+      "setting": {
+        "key_location": "Outside Main Palace Building (Arrival Forecourt Area)",
+        "scenography": "Front-center tight 2S, eye level, 50mm, main palace building exterior background",
+        "time_context": "Daylight, humor fades"
+      },
+      "character_focal_position": "Sia foreground; Pyarelaal behind, dominating upper frame"
+      ,
+      "characters": [
+        {
+          "character_name": "SIA",
+          "character_visual_identity": "Girl 8, light-brown skin, round face, bright eyes."
+        },
+        {
+          "character_name": "PYARELAAL",
+          "character_visual_identity": "Male late 20s, athletic, light stubble, confident stance."
+        }
+      ],
+      "story_context": {
+        "visual_style_guide": "Hyper-real cinematic",
+        "project_context": "Rajmahal Ki Dulhan romantic drama",
+        "era_culture_context": "Present-day Indian royal palace forecourt family tension",
+        "emotional_thematic_intent": "New domestic friction locks in, leaving the child quietly hurt."
+      },
+      "audio": {
+        "dialogue": "Papa chuhiya nahi siya....\nHaan haan chal....",
+        "audio_cue_intent": "Child voice small, his dismissive cut, music dips low."
+      }
+    }
+  ]
+}

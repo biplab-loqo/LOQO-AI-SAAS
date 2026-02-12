@@ -1,0 +1,56 @@
+{
+  "key_locations": [
+    {
+      "location_id": "1",
+      "name": "Grand Approach Road to Rajmahal",
+      "type": "Exterior",
+      "narrative_role": "Arrival approach establishing opulence",
+      "visual_profile": {
+        "environment": "Long grand road leading toward palace estate",
+        "cultural_or_era_style": "Present-day Indian royal",
+        "architecture_or_space": "Wide straight roadway, formal approach axis",
+        "lighting_time_of_day": "Daylight",
+        "key_objects_or_features": ["grand road"]
+      }
+    },
+    {
+      "location_id": "2",
+      "name": "Rajmahal Massive Outer Gate",
+      "type": "Exterior",
+      "narrative_role": "Threshold into royal estate",
+      "visual_profile": {
+        "environment": "Palace estate entrance frontage at end of approach road",
+        "cultural_or_era_style": "Present-day Indian royal",
+        "architecture_or_space": "Large monumental gate marking estate boundary",
+        "lighting_time_of_day": "Daylight",
+        "key_objects_or_features": ["massive outer gate"]
+      }
+    },
+    {
+      "location_id": "3",
+      "name": "Outside Main Palace Building (Arrival Forecourt Area)",
+      "type": "Exterior",
+      "narrative_role": "Public arrival and first confrontation space",
+      "visual_profile": {
+        "environment": "Open exterior area directly in front of main building",
+        "cultural_or_era_style": "Present-day Indian royal",
+        "architecture_or_space": "Main building facade with open space before it",
+        "lighting_time_of_day": "Daylight",
+        "key_objects_or_features": ["main palace building exterior"]
+      }
+    },
+    {
+      "location_id": "4",
+      "name": "Vast Palace Courtyard Zone",
+      "type": "Exterior",
+      "narrative_role": "Scale and grandeur backdrop",
+      "visual_profile": {
+        "environment": "Open courtyard spaces within palace estate grounds",
+        "cultural_or_era_style": "Present-day Indian royal",
+        "architecture_or_space": "Vast open courtyards bounded by imposing structures",
+        "lighting_time_of_day": "Daylight",
+        "key_objects_or_features": ["vast courtyards", "imposing palace architecture"]
+      }
+    }
+  ]
+}

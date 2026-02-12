@@ -1,0 +1,44 @@
+{
+  "Characters": {
+    "NAUKARANI": {
+      "Name/Identifier": "NAUKARANI",
+      "Cultural Context": "Senior palace servant",
+      "Visual Design": "Cinematic hyper-real realistic",
+      "Age & Gender": "Early 20s, female",
+      "Physical Description": "Slim, medium-light brown skin, oval face, sharp eyes, stern expression, low bun hair.",
+      "Attire": "Beige uniform coat, blue sash, belt, trousers."
+    },
+    "NAUKAR": {
+      "Name/Identifier": "NAUKAR",
+      "Cultural Context": "Palace servant, loyal observer.",
+      "Visual Design": "Cinematic hyper-real realistic",
+      "Age & Gender": "Late 20s, male",
+      "Physical Description": "Slim, medium-brown skin, curly hair, trimmed beard, calm eyes, serious posture.",
+      "Attire": "Beige uniform, blue sash, belt, trousers."
+    },
+    "GAYATRI": {
+      "Name/Identifier": "GAYATRI",
+      "Cultural Context": "Royal woman, modern grace.",
+      "Visual Design": "Cinematic hyper-real realistic",
+      "Age & Gender": "Late 20s, female",
+      "Physical Description": "Tall, warm brown skin, elegant face, calm eyes, sleek tied hair, poised stance.",
+      "Attire": "Dark blue floral lehenga, gold jewelry, dupatta."
+    },
+    "SIA": {
+      "Name/Identifier": "SIA",
+      "Cultural Context": "Innocent child",
+      "Visual Design": "Cinematic hyper-real realistic",
+      "Age & Gender": "8, female",
+      "Physical Description": "Petite, light-brown skin, round face, bright eyes, sweet smile, hair tied back.",
+      "Attire": "Light blue dress, white collar, sandals."
+    },
+    "PYARELAAL": {
+      "Name/Identifier": "PYARELAAL",
+      "Cultural Context": "Humble outsider, respectful driver.",
+      "Visual Design": "Cinematic hyper-real realistic",
+      "Age & Gender": "Late 20s, male",
+      "Physical Description": "Athletic build, fair-medium skin, wavy hair, sharp eyes, light stubble, confident stance.",
+      "Attire": "Blue patterned shirt, white dhoti, bead necklaces."
+    }
+  }
+}
