@@ -9,12 +9,17 @@
 
 # ── Step 1: Create Railway Project ────────────────────────────────────
 # Go to https://railway.app → New Project → Deploy from GitHub repo
-# Set the ROOT DIRECTORY to: backend
-# (Railway Settings → Source → Root Directory → "backend")
+#
+# ⚠️  CRITICAL: After creating the project, you MUST set the Root Directory:
+#     Railway Dashboard → Service → Settings → Source
+#     Set "Root Directory" to:  backend
+#
+# This tells Railway to build from the backend/ subdirectory, not the repo root.
 #
 # OR via CLI:
 #   npm i -g @railway/cli
 #   railway login
+#   cd backend
 #   railway init
 #   railway link
 

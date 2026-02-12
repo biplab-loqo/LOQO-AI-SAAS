@@ -1,4 +1,6 @@
 # Nixpacks configuration for Railway deployment
+# Railway should be configured with Root Directory = "backend"
+
 [phases.setup]
 nixPkgs = ["python311"]
 
