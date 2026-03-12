@@ -1,0 +1,15 @@
+# Exclude backend — not needed for frontend Vercel deployment
+backend/
+
+# Python artifacts
+*.py
+*.pyc
+__pycache__/
+.venv/
+venv/
+*.egg-info/
+
+# Misc
+*.sh
+*.log
+.git/
