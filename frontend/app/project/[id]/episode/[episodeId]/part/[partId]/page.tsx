@@ -9,6 +9,7 @@ import {
   History, Eye, Layers, Camera, Palette, Trash2, Upload, Plus, PanelRight, PanelRightClose,
   Clapperboard, PlayCircle, Download, ChevronDown,
 } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import {
   apiClient, ExecutionStatus, ExecutionStepSummary,
@@ -53,12 +54,26 @@ function KV({ label, value, accent }: { label: string; value?: string | null; ac
   if (!value) return null
   // Parse \n in strings as real line breaks
   const parts = value.split(/\\n|\n/)
+  const isTruncated = parts.length === 1 && parts[0].length > 80
   return (
     <div className="flex items-start gap-2 py-0.5">
       <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70 flex-shrink-0 min-w-[80px]">{label}</span>
-      <span className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-wrap">
-        {parts.map((p, i) => (<React.Fragment key={i}>{p}{i < parts.length - 1 && <br />}</React.Fragment>))}
-      </span>
+      {isTruncated ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-wrap truncate cursor-help block max-w-[300px]">
+              {parts[0]}...
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-md text-wrap">
+            {value}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <span className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-wrap">
+          {parts.map((p, i) => (<React.Fragment key={i}>{p}{i < parts.length - 1 && <br />}</React.Fragment>))}
+        </span>
+      )}
     </div>
   )
 }
@@ -221,14 +236,6 @@ interface CardImageGroup {
   label: string
   urls: string[]
   stepKey: string   // which backend step these images belong to
-}
-
-/** Carries context for a targeted image upload triggered from an entity card Add button */
-interface ImageUploadTarget {
-  entityName: string
-  sectionLabel: string   // "Anchor Images" | "View Pack Images"
-  stepKey: string
-  entityImages: string[] // current image URLs for that entity/section
 }
 
 interface EditingCard {
@@ -509,13 +516,41 @@ function ImageGrid({ urls, name }: { urls: string[]; name: string }) {
 }
 
 /** Image grid that shows each image with its own label (e.g. "Anchor Full", "Front Closeup") */
-function LabeledImageGrid({ images }: { images: LabeledImage[] }) {
+function LabeledImageGrid({ images, onIterateImage, isAnchor = false }: { images: LabeledImage[]; onIterateImage?: (image: LabeledImage) => void; isAnchor?: boolean }) {
   const urls = React.useMemo(() => images.map(i => i.url), [images])
   const galleryCtx = React.useMemo(() => ({
     urls,
     getLabel: (url: string) => images.find(i => i.url === url)?.label ?? '',
   }), [urls, images])
   if (!images.length) return null
+  
+  if (isAnchor) {
+    // Anchor images: show iterate button as overlay on hover
+    return (
+      <ImageGalleryCtx.Provider value={galleryCtx}>
+        <div className="mt-2 grid grid-cols-2 gap-3">
+          {images.map((img, i) => (
+            <div key={img.url + i} className="relative group">
+              <S3Image url={img.url} label={img.label} className="w-full rounded-xl" />
+              {onIterateImage && (
+                <button
+                  onClick={() => onIterateImage(img)}
+                  className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-accent-foreground text-[11px] font-semibold">
+                    <RefreshCw size={12} /> Iterate
+                  </div>
+                </button>
+              )}
+              <span className="absolute bottom-2 left-2 right-2 text-[9px] font-medium text-white bg-black/60 px-2 py-1 rounded truncate">{img.label}</span>
+            </div>
+          ))}
+        </div>
+      </ImageGalleryCtx.Provider>
+    )
+  }
+  
+  // Reference images: original layout
   return (
     <ImageGalleryCtx.Provider value={galleryCtx}>
       <div className="mt-2 flex flex-col gap-4">
@@ -523,6 +558,14 @@ function LabeledImageGrid({ images }: { images: LabeledImage[] }) {
           <div key={img.url + i} className="flex flex-col gap-1.5">
             <S3Image url={img.url} label={img.label} className="w-full rounded-xl" />
             <span className="text-[10px] font-medium text-muted-foreground/70 text-center truncate px-1">{img.label}</span>
+            {onIterateImage && (
+              <button
+                onClick={() => onIterateImage(img)}
+                className="mx-auto mt-1 flex items-center gap-1 px-2 py-1 rounded-lg border border-border/30 bg-secondary/30 text-[10px] font-semibold text-foreground/70 hover:text-foreground hover:bg-secondary/60 transition-all"
+              >
+                <RefreshCw size={10} /> Iterate
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -557,7 +600,7 @@ function CollageImageGrid({ urls, name }: { urls: string[]; name: string }) {
 }
 
 /** Collage-style grid for labeled images */
-function CollageImageGridLabeled({ images }: { images: LabeledImage[] }) {
+function CollageImageGridLabeled({ images, onIterateImage }: { images: LabeledImage[]; onIterateImage?: (image: LabeledImage) => void }) {
   const viewImage = React.useContext(ImageViewCtx)
   const urls = React.useMemo(() => images.map(i => i.url), [images])
   if (!images.length) return null
@@ -574,6 +617,15 @@ function CollageImageGridLabeled({ images }: { images: LabeledImage[] }) {
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/coll:opacity-100 transition-opacity flex items-center justify-center">
             <Eye size={18} className="text-white" />
           </div>
+          {onIterateImage && (
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onIterateImage(img) }}
+              className="absolute top-1 left-1 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-white font-semibold hover:bg-black/80 transition-all"
+            >
+              <RefreshCw size={9} /> Iterate
+            </button>
+          )}
           <div className="absolute bottom-1 left-1 right-1 px-1.5 py-0.5 rounded bg-black/50 text-[9px] text-white font-medium truncate text-center">
             {img.label}
           </div>
@@ -647,7 +699,21 @@ function RenderValue({ label, value, accent, depth = 0 }: { label: string; value
 
 /** Picks the best human-readable title from an object */
 function bestTitle(obj: Record<string, any>, fallback: string): string {
-  for (const key of ['name', 'title', 'Name', 'Title', 'Name_Identifier', 'shot_id', 'id', 'label']) {
+  for (const key of [
+    'display_name',
+    'character_name',
+    'location_name',
+    'name_identifier',
+    'name_id',
+    'name',
+    'title',
+    'Name',
+    'Title',
+    'Name_Identifier',
+    'shot_id',
+    'id',
+    'label',
+  ]) {
     if (typeof obj[key] === 'string' && obj[key].length > 0) return obj[key]
   }
   if (obj.metadata && typeof obj.metadata === 'object') {
@@ -997,17 +1063,26 @@ function LockedStepPlaceholder({ stepKey, stepName, canGenerate }: {
 
 // ─── Entity Page Renderer (Characters / Locations merged view) ─
 
-function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onRequestAddImages, onRequestEditCard }: {
+function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIterateImage, onRequestEditCard }: {
   data: Record<string, any>; tabKey: string
   approvedStepKeys?: Set<string>
-  onRequestAddImages?: (target: ImageUploadTarget) => void
+  onIterateImage?: (payload: {
+    stepKey: string
+    anchorStepKey?: string
+    referenceStepKey?: string
+    imageType: 'anchor' | 'reference'
+    image: LabeledImage
+    entityName: string
+    sectionLabel: string
+  }) => void
   onRequestEditCard?: (card: EditingCard) => void
 }) {
-  const { onUpload } = React.useContext(ImageManageCtx)
   const template = STEP_DISPLAY_TEMPLATE.find(t => t.tabKey === tabKey)
   if (!template) return null
 
-  // Per entity-page layout: stepKeys[0]=description, [1]=anchor, [2]=viewpack
+  const [imageMode, setImageMode] = useState<'anchor' | 'reference'>('anchor')
+
+  // Per entity-page layout: stepKeys[0]=description, [1]=anchor, [2]=reference-images
   const descriptionStepKey = template.stepKeys[0]
   const anchorStepKey = template.stepKeys[1]
   const viewPackStepKey = template.stepKeys[2]
@@ -1034,7 +1109,15 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onRequ
   let entities: Array<{ name: string; props: Record<string, any> }> = []
   if (Array.isArray(rawEntities)) {
     entities = rawEntities.map((item, i) => ({
-      name: bestTitle(item, `${entityKey.replace(/_/g, ' ')} ${i + 1}`),
+      name: String(
+        item?.display_name ||
+        item?.character_name ||
+        item?.location_name ||
+        item?.name ||
+        item?.name_identifier ||
+        item?.name_id ||
+        bestTitle(item, `${entityKey.replace(/_/g, ' ')} ${i + 1}`)
+      ),
       props: item,
     }))
   } else if (rawEntities && typeof rawEntities === 'object') {
@@ -1057,7 +1140,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onRequ
     return []
   }
 
-  // Helper: get view pack images for an entity
+  // Helper: get reference images for an entity
   const getViewPackImages = (name: string): LabeledImage[] | string[] => {
     const rich = richViewPackAssets.find(r => r.entityName.toLowerCase() === name.toLowerCase())
     if (rich) return rich.images
@@ -1075,6 +1158,11 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onRequ
         {entities.map((entity, idx) => {
           const anchorImgs = getAnchorImages(entity.name)
           const viewPackImgs = getViewPackImages(entity.name)
+          const hasDescription = !!entity.props && Object.keys(entity.props).length > 0
+          const activeImageMode: 'anchor' | 'reference' =
+            anchorImgs.length > 0
+              ? (viewPackImgs.length > 0 ? imageMode : 'anchor')
+              : 'reference'
 
           return (
             <StepCard key={entity.name} p={p} width={420} idx={idx}
@@ -1086,88 +1174,147 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onRequ
                     <Icon className={cn('w-5 h-5', p.accent)} />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-base font-bold text-foreground block truncate">{entity.name}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-base font-bold text-foreground block truncate cursor-help">{entity.name}</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {entity.name}
+                      </TooltipContent>
+                    </Tooltip>
                     <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{entityKey.replace(/_/g, ' ')}</span>
                   </div>
                 </div>
               }>
               <div className="overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30">
                 {/* ── Description ─────────────────────────── */}
-                <div className="px-4 pt-4 pb-4 space-y-1">
-                  <div className="flex items-center gap-2 mb-3 pb-2">
-                    <FileText size={14} className={p.accent} />
-                    <span className="text-[14px] font-bold tracking-tight text-foreground">Description</span>
-                  </div>
-                  {Object.entries(entity.props).map(([k, v]) => (
-                    <RenderValue key={k} label={k} value={v} accent={p.accent} />
-                  ))}
-                </div>
-
-                {/* ── Anchor Images ────────────────────────── */}
-                <div className="px-4 pb-4 pt-3">
-                  <div className="flex items-center gap-2 mb-3 pb-2">
-                    <ImageIcon size={14} className={p.accent} />
-                    <span className="text-[14px] font-bold tracking-tight text-foreground">Anchor Images</span>
-                    {anchorStepKey && (
-                      <button
-                        onClick={() => onRequestAddImages?.({
-                          entityName: entity.name,
-                          sectionLabel: 'Anchor Images',
-                          stepKey: anchorStepKey as string,
-                          entityImages: anchorImgs.length > 0
-                            ? (typeof (anchorImgs as any[])[0] === 'object' ? (anchorImgs as LabeledImage[]).map(i => i.url) : anchorImgs as string[])
-                            : [],
-                        })}
-                        className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/40 bg-secondary/50 text-[10px] font-semibold text-foreground/70 hover:bg-secondary hover:text-foreground hover:border-accent/40 transition-all"
-                      >
-                        <Plus size={10} />Add
-                      </button>
-                    )}
-                  </div>
-                  {anchorImgs.length > 0 ? (
-                    Array.isArray(anchorImgs) && typeof anchorImgs[0] === 'object' && 'label' in (anchorImgs[0] as any)
-                      ? <LabeledImageGrid images={anchorImgs as LabeledImage[]} />
-                      : <ImageGrid urls={anchorImgs as string[]} name={entity.name + '_anchor'} />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-7 rounded-xl border border-dashed border-border/25 bg-muted/5">
-                      <ImageIcon size={20} className="text-muted-foreground/25 mb-2" />
-                      <p className="text-[11px] text-muted-foreground/40">No anchor images yet</p>
+                {hasDescription && (
+                  <div className="px-4 pt-4 pb-4 space-y-1">
+                    <div className="flex items-center gap-2 mb-3 pb-2">
+                      <FileText size={14} className={p.accent} />
+                      <span className="text-[14px] font-bold tracking-tight text-foreground">Description</span>
                     </div>
-                  )}
-                </div>
-
-                {/* ── View Pack Images ─────────────────────── */}
-                <div className="px-4 pb-4 pt-3">
-                  <div className="flex items-center gap-2 mb-3 pb-2">
-                    <Layers size={14} className={p.accent} />
-                    <span className="text-[14px] font-bold tracking-tight text-foreground">View Pack Images</span>
-                    {viewPackStepKey && (
-                      <button
-                        onClick={() => onRequestAddImages?.({
-                          entityName: entity.name,
-                          sectionLabel: 'View Pack Images',
-                          stepKey: viewPackStepKey as string,
-                          entityImages: viewPackImgs.length > 0
-                            ? (typeof (viewPackImgs as any[])[0] === 'object' ? (viewPackImgs as LabeledImage[]).map(i => i.url) : viewPackImgs as string[])
-                            : [],
-                        })}
-                        className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/40 bg-secondary/50 text-[10px] font-semibold text-foreground/70 hover:bg-secondary hover:text-foreground hover:border-accent/40 transition-all"
-                      >
-                        <Plus size={10} />Add
-                      </button>
-                    )}
+                    {Object.entries(entity.props).map(([k, v]) => (
+                      <RenderValue key={k} label={k} value={v} accent={p.accent} />
+                    ))}
                   </div>
-                  {viewPackImgs.length > 0 ? (
-                    Array.isArray(viewPackImgs) && typeof viewPackImgs[0] === 'object' && 'label' in (viewPackImgs[0] as any)
-                      ? <CollageImageGridLabeled images={viewPackImgs as LabeledImage[]} />
-                      : <CollageImageGrid urls={viewPackImgs as string[]} name={entity.name + '_viewpack'} />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-7 rounded-xl border border-dashed border-border/25 bg-muted/5">
-                      <ImageIcon size={20} className="text-muted-foreground/25 mb-2" />
-                      <p className="text-[11px] text-muted-foreground/40">No view pack images yet</p>
+                )}
+
+                {/* ── Image Type Toggle (only show if both types available) ────────────────────────── */}
+                {anchorImgs.length > 0 && viewPackImgs.length > 0 && (
+                  <div className="px-4 pt-3 pb-3 flex gap-2 border-t border-border/20">
+                    <button
+                      onClick={() => setImageMode('anchor')}
+                      className={cn(
+                        'flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all',
+                        imageMode === 'anchor'
+                          ? 'bg-accent text-accent-foreground shadow-sm'
+                          : 'bg-secondary/40 text-foreground/70 hover:bg-secondary/60'
+                      )}
+                    >
+                      <ImageIcon size={12} className="inline mr-1" />
+                      Anchor
+                    </button>
+                    <button
+                      onClick={() => setImageMode('reference')}
+                      className={cn(
+                        'flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all',
+                        imageMode === 'reference'
+                          ? 'bg-accent text-accent-foreground shadow-sm'
+                          : 'bg-secondary/40 text-foreground/70 hover:bg-secondary/60'
+                      )}
+                    >
+                      <Layers size={12} className="inline mr-1" />
+                      Reference
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Anchor Images (show only when imageMode is anchor and available) ────────────────────────── */}
+                {anchorImgs.length > 0 && activeImageMode === 'anchor' && (
+                  <div className="px-4 pb-4 pt-3">
+                    <div className="flex items-center gap-2 mb-3 pb-2">
+                      <ImageIcon size={14} className={p.accent} />
+                      <span className="text-[14px] font-bold tracking-tight text-foreground">Anchor Images</span>
                     </div>
-                  )}
-                </div>
+                    {Array.isArray(anchorImgs) && typeof anchorImgs[0] === 'object' && 'label' in (anchorImgs[0] as any)
+                      ? <LabeledImageGrid
+                          images={anchorImgs as LabeledImage[]}
+                          isAnchor={true}
+                          onIterateImage={anchorStepKey
+                            ? (image) => onIterateImage?.({
+                                stepKey: anchorStepKey,
+                                anchorStepKey,
+                                referenceStepKey: viewPackStepKey,
+                                imageType: 'anchor',
+                                image,
+                                entityName: entity.name,
+                                sectionLabel: 'Anchor Images',
+                              })
+                            : undefined
+                          }
+                        />
+                      : <LabeledImageGrid
+                          images={(anchorImgs as string[]).map((url, i) => ({ url, label: `Anchor ${i + 1}` }))}
+                          isAnchor={true}
+                          onIterateImage={anchorStepKey
+                            ? (image) => onIterateImage?.({
+                                stepKey: anchorStepKey,
+                                anchorStepKey,
+                                referenceStepKey: viewPackStepKey,
+                                imageType: 'anchor',
+                                image,
+                                entityName: entity.name,
+                                sectionLabel: 'Anchor Images',
+                              })
+                            : undefined
+                          }
+                        />
+                    }
+                  </div>
+                )}
+
+                {/* ── Reference Images (show only when imageMode is reference and available) ─────────────────────── */}
+                {viewPackImgs.length > 0 && activeImageMode === 'reference' && (
+                  <div className="px-4 pb-4 pt-3">
+                    <div className="flex items-center gap-2 mb-3 pb-2">
+                      <Layers size={14} className={p.accent} />
+                      <span className="text-[14px] font-bold tracking-tight text-foreground">Reference Images</span>
+                    </div>
+                    {Array.isArray(viewPackImgs) && typeof viewPackImgs[0] === 'object' && 'label' in (viewPackImgs[0] as any)
+                      ? <CollageImageGridLabeled
+                          images={viewPackImgs as LabeledImage[]}
+                          onIterateImage={viewPackStepKey
+                            ? (image) => onIterateImage?.({
+                                stepKey: viewPackStepKey,
+                                anchorStepKey,
+                                referenceStepKey: viewPackStepKey,
+                                imageType: 'reference',
+                                image,
+                                entityName: entity.name,
+                                sectionLabel: 'Reference Images',
+                              })
+                            : undefined
+                          }
+                        />
+                      : <CollageImageGridLabeled
+                          images={(viewPackImgs as string[]).map((url, i) => ({ url, label: `Reference ${i + 1}` }))}
+                          onIterateImage={viewPackStepKey
+                            ? (image) => onIterateImage?.({
+                                stepKey: viewPackStepKey,
+                                anchorStepKey,
+                                referenceStepKey: viewPackStepKey,
+                                imageType: 'reference',
+                                image,
+                                entityName: entity.name,
+                                sectionLabel: 'Reference Images',
+                              })
+                            : undefined
+                          }
+                        />
+                    }
+                  </div>
+                )}
               </div>
             </StepCard>
           )
@@ -1193,7 +1340,22 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onRequ
                   </div>
                 }>
                 <div className="p-3 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30">
-                  <ImageGrid urls={chunk} name={`anchor_${i}`} />
+                  <LabeledImageGrid
+                    images={chunk.map((url, idx) => ({ url, label: `Anchor ${i * 3 + idx + 1}` }))}
+                    isAnchor={true}
+                    onIterateImage={anchorStepKey
+                      ? (image) => onIterateImage?.({
+                          stepKey: anchorStepKey,
+                          anchorStepKey,
+                          referenceStepKey: viewPackStepKey,
+                          imageType: 'anchor',
+                          image,
+                          entityName: template.label,
+                          sectionLabel: 'Anchor Images',
+                        })
+                      : undefined
+                    }
+                  />
                 </div>
               </StepCard>
             ))}
@@ -1205,7 +1367,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onRequ
         <div>
           <div className="flex items-center gap-2 mb-3">
             <ImageIcon size={14} className={p.accent} />
-            <span className={cn('text-[11px] font-bold uppercase tracking-wider', p.accent)}>View Pack Images</span>
+            <span className={cn('text-[11px] font-bold uppercase tracking-wider', p.accent)}>Reference Images</span>
           </div>
           <HScrollContainer>
             {chunkArray(viewPackS3, 3).map((chunk, i) => (
@@ -1215,11 +1377,25 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onRequ
                     <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center', p.bg)}>
                       <ImageIcon className={cn('w-4 h-4', p.accent)} />
                     </div>
-                    <span className="text-sm font-bold text-foreground">{`View Pack ${i * 3 + 1}–${i * 3 + chunk.length}`}</span>
+                    <span className="text-sm font-bold text-foreground">{`Reference ${i * 3 + 1}–${i * 3 + chunk.length}`}</span>
                   </div>
                 }>
                 <div className="p-3 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30">
-                  <ImageGrid urls={chunk} name={`viewpack_${i}`} />
+                  <CollageImageGridLabeled
+                    images={chunk.map((url, idx) => ({ url, label: `Reference ${i * 3 + idx + 1}` }))}
+                    onIterateImage={viewPackStepKey
+                      ? (image) => onIterateImage?.({
+                          stepKey: viewPackStepKey,
+                          anchorStepKey,
+                          referenceStepKey: viewPackStepKey,
+                          imageType: 'reference',
+                          image,
+                          entityName: template.label,
+                          sectionLabel: 'Reference Images',
+                        })
+                      : undefined
+                    }
+                  />
                 </div>
               </StepCard>
             ))}
@@ -1339,7 +1515,14 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
                   <span className="ml-auto text-[10px] font-bold text-foreground/60 bg-secondary rounded-md px-1.5 py-0.5">{group.versions.length} ver</span>
                 </div>
                 {latest?.oneLinerShotIntent && (
-                  <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug line-clamp-2 pl-[34px]">{latest.oneLinerShotIntent}</p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug line-clamp-1 pl-[34px] cursor-help truncate">{latest.oneLinerShotIntent}</p>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-wrap">
+                      {latest.oneLinerShotIntent}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
 
@@ -1733,6 +1916,21 @@ type PanelTask =
   | { mode: 'iterate'; targetType: 'shot'; item: ShotOut; label: string }
   | { mode: 'edit'; targetType: 'clip'; item: ClipOut; label: string }
   | { mode: 'iterate'; targetType: 'clip'; item: ClipOut; label: string }
+  | {
+      mode: 'iterate'
+      targetType: 'entity-image'
+      item: {
+        stepKey: string
+        anchorStepKey?: string
+        referenceStepKey?: string
+        imageType: 'anchor' | 'reference'
+        imageUrl: string
+        imageLabel: string
+        entityName: string
+        sectionLabel: string
+      }
+      label: string
+    }
   | { mode: 'edit'; targetType: 'card'; card: EditingCard; label: string }
   | null
 
@@ -1795,7 +1993,8 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
 
   // ── Save handler for shot/clip edit (Retry) ──
   const handleEditSave = async () => {
-    if (!panelTask || panelTask.targetType === 'card') return
+    if (!panelTask || panelTask.mode !== 'edit') return
+    if (panelTask.targetType !== 'shot' && panelTask.targetType !== 'clip') return
     setEditSaving(true)
     setEditSaveError(null)
     try {
@@ -1839,10 +2038,22 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
 
   // ── Iterate handler (sends prompt to backend) ──
   const handleIterate = async () => {
-    if (!iteratePrompt.trim() || !panelTask) return
+    if (!iteratePrompt.trim() || !panelTask || panelTask.mode !== 'iterate') return
     setIterateSending(true)
     try {
-      const stepKey = panelTask.targetType === 'shot' ? 'generate_images_nano_banana' : 'generate_animations'
+      let stepKey = ''
+      if (panelTask.targetType === 'shot') {
+        stepKey = 'generate_images_nano_banana'
+      } else if (panelTask.targetType === 'clip') {
+        stepKey = 'generate_animations'
+      } else if (panelTask.targetType === 'entity-image') {
+        const preferred = panelTask.item.imageType === 'anchor'
+          ? panelTask.item.anchorStepKey
+          : panelTask.item.referenceStepKey
+        stepKey = preferred || panelTask.item.stepKey
+      } else {
+        return
+      }
       await apiClient.iterateStep(executionId, stepKey, iteratePrompt, {
         org_id: orgId, project_id: projectId, episode_id: episodeId, part_id: partId,
       })
@@ -2139,6 +2350,47 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
         )
       })()}
 
+      {/* ── Iterate Entity Image ── */}
+      {panelTask?.mode === 'iterate' && panelTask.targetType === 'entity-image' && (() => {
+        const item = panelTask.item
+        return (
+          <>
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30">
+              <div className="rounded-xl overflow-hidden border border-border/20 bg-black/10">
+                <img src={item.imageUrl} alt={item.imageLabel} loading="lazy" className="w-full object-cover" />
+              </div>
+              <div className="rounded-lg bg-secondary/20 px-3 py-2 border border-border/20 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Entity</p>
+                <p className="text-[12px] text-foreground/80">{item.entityName}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mt-2">Image Type</p>
+                <p className="text-[12px] text-foreground/80">
+                  {item.imageType === 'anchor' ? 'Anchor Image' : 'Reference Image'}
+                </p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mt-2">Section</p>
+                <p className="text-[12px] text-foreground/80">{item.sectionLabel}</p>
+              </div>
+            </div>
+            <div className="p-3 flex-shrink-0 space-y-2">
+              <AutoResizeTextarea
+                value={iteratePrompt}
+                onChange={e => setIteratePrompt(e.target.value)}
+                placeholder={`Describe what to change in this ${item.imageType === 'anchor' ? 'anchor' : 'reference'} image…`}
+                minRows={2}
+                className="w-full px-3 py-2.5 rounded-xl bg-secondary/40 border border-border/40 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-accent/50 leading-relaxed"
+              />
+              <button onClick={handleIterate} disabled={!iteratePrompt.trim() || iterateSending}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40 transition-all text-[12px] font-semibold">
+                {iterateSending ? <><Loader2 size={13} className="animate-spin" /> Retrying…</> : <><RefreshCw size={13} /> Retry</>}
+              </button>
+              <button onClick={onCancelTask}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-secondary/40 text-foreground/70 hover:bg-secondary/60 hover:text-foreground transition-all text-[12px] font-medium">
+                Cancel
+              </button>
+            </div>
+          </>
+        )
+      })()}
+
       {/* ── Edit Card (beat, storyboard, etc.) ── */}
       {panelTask?.mode === 'edit' && panelTask.targetType === 'card' && (() => {
         const card = panelTask.card
@@ -2220,7 +2472,6 @@ export default function PartStudioPage() {
 
   // AI panel + image lightbox
   const [aiPanelOpen, setAiPanelOpen] = useState(true)
-  const [imageUploadTarget, setImageUploadTarget] = useState<ImageUploadTarget | null>(null)
   const [viewingImage, setViewingImage] = useState<{ urls: string[]; startIndex: number; label?: string } | null>(null)
 
   // Task-based AI panel state (replaces old editingItem / editingCard)
@@ -2238,12 +2489,7 @@ export default function PartStudioPage() {
   const tabBarRef = useRef<HTMLDivElement>(null)
   const [tabCanScrollLeft, setTabCanScrollLeft] = useState(false)
   const [tabCanScrollRight, setTabCanScrollRight] = useState(false)
-  const handleTabChange = useCallback((tab: string) => { setActiveTab(tab); activeTabRef.current = tab; setImageUploadTarget(null) }, [])
-
-  const handleRequestAddImages = useCallback((target: ImageUploadTarget) => {
-    setImageUploadTarget(target)
-    setAiPanelOpen(true)
-  }, [])
+  const handleTabChange = useCallback((tab: string) => { setActiveTab(tab); activeTabRef.current = tab }, [])
 
   // ── Edit / Iterate shot & clip in right panel ───────────────────────
   const handleEditShot = useCallback((shot: ShotOut) => {
@@ -2408,8 +2654,8 @@ export default function PartStudioPage() {
     }
     if (!execution) return [] as (TabTemplate & { status: TabStatus; versionNo: number })[]
     const stepMap = new Map(execution.steps.map(s => [s.step_key, s]))
-    // approvedKeys — only steps explicitly marked 'approved' by the user
-    const approvedKeys = new Set(execution.steps.filter(s => s.status === 'approved').map(s => s.step_key))
+    // approvedKeys — only steps explicitly approved by the user
+    const approvedKeys = new Set(execution.steps.filter(s => !!s.is_approved).map(s => s.step_key))
 
     // All execution step keys in pipeline order (includes hidden steps)
     const allExecStepKeys = execution.steps.map(s => s.step_key)
@@ -2419,8 +2665,10 @@ export default function PartStudioPage() {
       if (constituentSteps.length === 0) return null
       // allApproved: ONLY true when the user has explicitly approved all constituent steps
       const allApproved = constituentSteps.every(s => approvedKeys.has(s!.step_key))
-      // anySucceeded: true when any step has finished running AND has data to show
-      const anySucceeded = constituentSteps.some(s => (s!.status === 'succeeded' || s!.status === 'approved') && s!.has_data)
+      // anySucceeded: true when any constituent step finished successfully.
+      // NOTE: in test_v3, entity tabs can be backed by independent collections
+      // (characters/locations) even when stepVersion.has_data is false/missing.
+      const anySucceeded = constituentSteps.some(s => s!.status === 'succeeded')
       const anyRunning = constituentSteps.some(s => s!.status === 'running')
       const allNotStarted = constituentSteps.every(s => s!.status === 'not_started')
 
@@ -2496,7 +2744,13 @@ export default function PartStudioPage() {
             : ((row as LocationOut).location_description ?? {})
 
           const displayName = String(
-            desc.display_name || desc.character_name || desc.location_name || desc.name || desc.name_id || 'Entity'
+            desc.display_name ||
+            desc.character_name ||
+            desc.location_name ||
+            desc.name ||
+            desc.name_identifier ||
+            desc.name_id ||
+            'Entity'
           )
 
           entities.push(desc)
@@ -2536,12 +2790,32 @@ export default function PartStudioPage() {
         }
 
         const hasReal = entities.length > 0 || combined._anchorS3.length > 0 || combined._viewPackS3.length > 0
-        setTabData(prev => ({ ...prev, [activeTab]: hasReal ? combined : null }))
+        setTabData(prev => ({
+          ...prev,
+          [activeTab]: hasReal ? combined : { ...combined, _empty: true },
+        }))
         setStepVersions(prev => ({ ...prev, [activeTab]: [] }))
       }
 
       loadFromCollections()
-        .catch(() => setTabData(prev => ({ ...prev, [activeTab]: null })))
+        .catch(() => {
+          const fallbackEntityKey = template.entityKey || (activeTab === 'characters' ? 'Characters' : 'Key_Locations')
+          setTabData(prev => ({
+            ...prev,
+            [activeTab]: {
+              _layout: template.layout,
+              _entityKey: fallbackEntityKey,
+              [fallbackEntityKey]: [],
+              _anchorRefs: {},
+              _viewPackRefs: {},
+              _richAnchorAssets: [],
+              _richViewPackAssets: [],
+              _anchorS3: [],
+              _viewPackS3: [],
+              _empty: true,
+            },
+          }))
+        })
         .finally(() => setTabLoading(false))
     } else if (template.layout === 'shots' && template.stepKeys.length > 1) {
       // ── Shots tab: read from independent shots collection ──
@@ -2550,11 +2824,15 @@ export default function PartStudioPage() {
           const combined: Record<string, any> = {
             _layout: template.layout,
             _shots: rows,
+            _empty: rows.length === 0,
           }
-          setTabData(prev => ({ ...prev, [activeTab]: rows.length > 0 ? combined : null }))
+          setTabData(prev => ({ ...prev, [activeTab]: combined }))
           setStepVersions(prev => ({ ...prev, [activeTab]: [] }))
         })
-        .catch(() => setTabData(prev => ({ ...prev, [activeTab]: null })))
+        .catch(() => setTabData(prev => ({
+          ...prev,
+          [activeTab]: { _layout: template.layout, _shots: [], _empty: true },
+        })))
         .finally(() => setTabLoading(false))
     } else if (template.layout === 'animations') {
       // ── Animations tab: read from independent clips collection ──
@@ -2563,11 +2841,15 @@ export default function PartStudioPage() {
           const combined: Record<string, any> = {
             _layout: 'animations',
             _clips: rows,
+            _empty: rows.length === 0,
           }
-          setTabData(prev => ({ ...prev, [activeTab]: rows.length > 0 ? combined : null }))
+          setTabData(prev => ({ ...prev, [activeTab]: combined }))
           setStepVersions(prev => ({ ...prev, [activeTab]: [] }))
         })
-        .catch(() => setTabData(prev => ({ ...prev, [activeTab]: null })))
+        .catch(() => setTabData(prev => ({
+          ...prev,
+          [activeTab]: { _layout: 'animations', _clips: [], _empty: true },
+        })))
         .finally(() => setTabLoading(false))
     } else {
       // ── Single-step tab ──
@@ -2575,12 +2857,15 @@ export default function PartStudioPage() {
       apiClient.getStepData(executionId, stepKey)
         .then(stepData => {
           const data = extractStepData(stepData)
-          setTabData(prev => ({ ...prev, [activeTab]: Object.keys(data).length > 0 ? data : null }))
+          setTabData(prev => ({
+            ...prev,
+            [activeTab]: Object.keys(data).length > 0 ? data : { _empty: true },
+          }))
           if (stepData.step_version_id) {
             setSelectedVersionId(prev => ({ ...prev, [activeTab]: stepData.step_version_id }))
           }
         })
-        .catch(() => setTabData(prev => ({ ...prev, [activeTab]: null })))
+        .catch(() => setTabData(prev => ({ ...prev, [activeTab]: { _empty: true } })))
         .finally(() => setTabLoading(false))
 
       // Load version history
@@ -2635,7 +2920,7 @@ export default function PartStudioPage() {
 
     for (const [key, status] of newMap) {
       const oldStatus = prev.get(key)
-      if (oldStatus === 'running' && (status === 'succeeded' || status === 'approved')) {
+      if (oldStatus === 'running' && status === 'succeeded') {
         // Clear cached tab data so fresh data loads when the user views the tab
         const affectedTab = STEP_DISPLAY_TEMPLATE.find(t => t.stepKeys.includes(key))
         if (affectedTab) {
@@ -2700,11 +2985,9 @@ export default function PartStudioPage() {
   //
   // For single-step tabs:  finds the step after the tab's only step.
   // For multi-step tabs (Characters, Locations), walks from the last constituent backwards:
-  //   • step 'succeeded'  + next 'not_started' → show Approve CTA
-  //   • step 'succeeded'  + next 'running'     → show Processing banner
-  //   • step 'approved'   + next 'running'     → show Processing banner
-  //     (this covers the case where the user approved a sub-step and the next
-  //      sub-step is now running but the current step is no longer 'succeeded')
+  //   • step 'succeeded' + next 'not_started' → show Approve CTA
+  //   • step approved(true) + next 'running'  → show Processing banner
+  //   • step 'succeeded' + next 'running'     → show Processing banner
   const tabApprovalState = useMemo(() => {
     if (!execution || !activeTemplate) return null
     const stepMap = new Map(execution.steps.map(s => [s.step_key, s]))
@@ -2715,7 +2998,7 @@ export default function PartStudioPage() {
       const step = stepMap.get(sk)
       if (!step) continue
       const isSucceeded = step.status === 'succeeded'
-      const isApproved  = step.status === 'approved'
+      const isApproved  = !!step.is_approved
       if (!isSucceeded && !isApproved) continue
 
       const isLast = i + 1 >= keys.length
@@ -2849,14 +3132,15 @@ export default function PartStudioPage() {
 
   // ── Main studio UI ────────────────────────────────────────
   return (
-    <ImageViewCtx.Provider value={(urls, index, label) => setViewingImage({ urls, startIndex: index, label })}>
-    <ImageManageCtx.Provider value={{ onDelete: handleImageDelete, onUpload: handleImageUpload }}>
-    <AnimatePresence>
-      {viewingImage && (
-        <ImageLightbox urls={viewingImage.urls} startIndex={viewingImage.startIndex} label={viewingImage.label} onClose={() => setViewingImage(null)} />
-      )}
-    </AnimatePresence>
-    <div className="flex h-full min-h-0 bg-background overflow-hidden">
+    <TooltipProvider>
+      <ImageViewCtx.Provider value={(urls, index, label) => setViewingImage({ urls, startIndex: index, label })}>
+      <ImageManageCtx.Provider value={{ onDelete: handleImageDelete, onUpload: handleImageUpload }}>
+      <AnimatePresence>
+        {viewingImage && (
+          <ImageLightbox urls={viewingImage.urls} startIndex={viewingImage.startIndex} label={viewingImage.label} onClose={() => setViewingImage(null)} />
+        )}
+      </AnimatePresence>
+      <div className="flex h-full min-h-0 bg-background overflow-hidden">
 
       {/* Left column: tab bar + scrollable content */}
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -2886,22 +3170,28 @@ export default function PartStudioPage() {
               const isCompleted = tab.status === 'completed'
               const canClick = true
               return (
-                <button
-                  key={tab.tabKey}
-                  onClick={() => handleTabChange(tab.tabKey)}
-                  disabled={false}
-                  title={tab.label}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-all duration-150',
-                    isActive ? 'bg-accent text-accent-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                  )}>
-                  {isRunning ? <Loader2 size={12} className="animate-spin opacity-70 flex-shrink-0" />
-                    : <Icon size={12} className={cn('flex-shrink-0', isActive ? 'text-accent-foreground' : p.accent)} />}
-                  <span>{tab.label}</span>
-                  {tab.versionNo > 0 && <span className="text-[9px] opacity-60">v{tab.versionNo}</span>}
-                  {isRunning && <span className="text-[9px] opacity-60 animate-pulse ml-0.5">&#8226;</span>}
-                </button>
+                <Tooltip key={tab.tabKey}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => handleTabChange(tab.tabKey)}
+                      disabled={false}
+                      title={tab.label}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-all duration-150',
+                        isActive ? 'bg-accent text-accent-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                      )}>
+                      {isRunning ? <Loader2 size={12} className="animate-spin opacity-70 flex-shrink-0" />
+                        : <Icon size={12} className={cn('flex-shrink-0', isActive ? 'text-accent-foreground' : p.accent)} />}
+                      <span className="truncate max-w-[120px]">{tab.label}</span>
+                      {tab.versionNo > 0 && <span className="text-[9px] opacity-60">v{tab.versionNo}</span>}
+                      {isRunning && <span className="text-[9px] opacity-60 animate-pulse ml-0.5">&#8226;</span>}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {tab.label}
+                  </TooltipContent>
+                </Tooltip>
               )
             })}
           </div>          </div>
@@ -2997,9 +3287,26 @@ export default function PartStudioPage() {
                       <EntityPageRenderer
                         data={tabData[activeTab]!}
                         tabKey={activeTab}
-                        approvedStepKeys={new Set(execution?.steps.filter(s => s.status === 'approved').map(s => s.step_key) ?? [])}
-                        onRequestAddImages={handleRequestAddImages}
+                        approvedStepKeys={new Set(execution?.steps.filter(s => !!s.is_approved).map(s => s.step_key) ?? [])}
                         onRequestEditCard={handleEditCard}
+                        onIterateImage={(payload) => {
+                          setPanelTask({
+                            mode: 'iterate',
+                            targetType: 'entity-image',
+                            item: {
+                              stepKey: payload.stepKey,
+                              anchorStepKey: payload.anchorStepKey,
+                              referenceStepKey: payload.referenceStepKey,
+                              imageType: payload.imageType,
+                              imageUrl: payload.image.url,
+                              imageLabel: payload.image.label,
+                              entityName: payload.entityName,
+                              sectionLabel: payload.sectionLabel,
+                            },
+                            label: `${payload.entityName} • ${payload.image.label}`,
+                          })
+                          setAiPanelOpen(true)
+                        }}
                       />
                     ) : tabData[activeTab]?._layout === 'shots' ? (
                       <ShotsRenderer
@@ -3016,7 +3323,7 @@ export default function PartStudioPage() {
                       <UniversalRenderer
                         stepKey={activeTab}
                         data={tabData[activeTab] ?? {}}
-                        approvedStepKeys={new Set(execution?.steps.filter(s => s.status === 'approved').map(s => s.step_key) ?? [])}
+                        approvedStepKeys={new Set(execution?.steps.filter(s => !!s.is_approved).map(s => s.step_key) ?? [])}
                         onRequestEditCard={handleEditCard}
                       />
                     )}
@@ -3076,5 +3383,6 @@ export default function PartStudioPage() {
     </div>
     </ImageManageCtx.Provider>
     </ImageViewCtx.Provider>
+    </TooltipProvider>
   )
 }

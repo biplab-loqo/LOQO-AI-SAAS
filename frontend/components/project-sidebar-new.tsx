@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 import { projectRefreshEvents } from '@/lib/refresh-events'
 import { motion, AnimatePresence } from "framer-motion"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 
 /* ════════════════════════════════════════════════════════════════
    NAVIGATION ITEM - Top-level nav (Dashboard, Team, Settings)
@@ -120,37 +121,45 @@ function EpisodeHeader({
   onToggle: () => void
   href: string
 }) {
+  const label = `Episode ${episodeNumber}`
   return (
     <Link href={href}>
-      <motion.button
-        onClick={(e) => {
-          e.preventDefault()
-          onToggle()
-        }}
-        whileHover={{ x: 4 }}
-        whileTap={{ scale: 0.98 }}
-        className={cn(
-          "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium",
-          isActive
-            ? "bg-accent/15 text-accent shadow-sm shadow-accent/10"
-            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
-        )}
-      >
-        <ChevronDown
-          size={16}
-          className={cn("flex-shrink-0 transition-transform duration-300", isExpanded ? "rotate-180" : "")}
-        />
-        <Play size={16} className="flex-shrink-0" />
-        <span className="truncate flex-1 text-left">Episode {episodeNumber}</span>
-        <span className={cn(
-          "text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0",
-          isActive
-            ? "bg-accent/10 text-accent"
-            : "bg-muted/60 text-foreground/60"
-        )}>
-          {partCount}
-        </span>
-      </motion.button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <motion.button
+            onClick={(e) => {
+              e.preventDefault()
+              onToggle()
+            }}
+            whileHover={{ x: 4 }}
+            whileTap={{ scale: 0.98 }}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium",
+              isActive
+                ? "bg-accent/15 text-accent shadow-sm shadow-accent/10"
+                : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            <ChevronDown
+              size={16}
+              className={cn("flex-shrink-0 transition-transform duration-300", isExpanded ? "rotate-180" : "")}
+            />
+            <Play size={16} className="flex-shrink-0" />
+            <span className="truncate flex-1 text-left">{label}</span>
+            <span className={cn(
+              "text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0",
+              isActive
+                ? "bg-accent/10 text-accent"
+                : "bg-muted/60 text-foreground/60"
+            )}>
+              {partCount}
+            </span>
+          </motion.button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {label}
+        </TooltipContent>
+      </Tooltip>
     </Link>
   )
 }
@@ -169,23 +178,46 @@ function PartItem({
   isActive: boolean
   href: string
 }) {
+  const [isHovered, setIsHovered] = useState(false)
+  const fullLabel = `Part ${partNumber} ${title}`
+  const shouldAnimate = title.length > 20
+  
   return (
     <Link href={href}>
-      <motion.div
-        whileHover={{ x: 3 }}
-        whileTap={{ scale: 0.98 }}
-        className={cn(
-          "w-4/5 ml-auto flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm transition-all duration-200",
-          isActive
-            ? "bg-accent/20 text-accent font-semibold shadow-sm shadow-accent/10"
-            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
-        )}
-      >
-        <div className="min-w-0 flex-1">
-          <span className="font-semibold">Part {partNumber}</span>
-          <span className="text-foreground/50 ml-1 truncate">{title}</span>
-        </div>
-      </motion.div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <motion.div
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            whileHover={{ x: 3 }}
+            whileTap={{ scale: 0.98 }}
+            className={cn(
+              "w-4/5 ml-auto flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 overflow-hidden",
+              isActive
+                ? "bg-accent/20 text-accent font-semibold shadow-sm shadow-accent/10"
+                : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            <div className="min-w-0 flex-1 flex flex-col">
+              <span className="font-semibold truncate">Part {partNumber}</span>
+              {shouldAnimate && isHovered ? (
+                <motion.span
+                  className="text-foreground/50 text-xs"
+                  animate={{ x: [-100, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
+                  {title}
+                </motion.span>
+              ) : (
+                <span className="text-foreground/50 text-xs truncate">{title}</span>
+              )}
+            </div>
+          </motion.div>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {fullLabel}
+        </TooltipContent>
+      </Tooltip>
     </Link>
   )
 }
@@ -302,12 +334,13 @@ export default function ProjectSidebarNew({
   }
 
   return (
-    <motion.div
-      initial={{ x: -32, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="h-full w-72 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-hidden pt-12 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80"
-    >
+    <TooltipProvider>
+      <motion.div
+        initial={{ x: -32, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="h-full w-72 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-hidden pt-12 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80"
+      >
       {/* ═══════════════════════════════════════════════════════════
           TOP NAVIGATION
           ═══════════════════════════════════════════════════════════ */}
@@ -496,5 +529,6 @@ export default function ProjectSidebarNew({
         />
       </div>
     </motion.div>
+    </TooltipProvider>
   )
 }

@@ -40,6 +40,7 @@ class StepVersion(Document):
     output: Optional[Dict[str, Any]] = None
 
     status: str = "pending"
+    is_approved: bool = Field(False, alias="isApproved")
     error: Optional[Any] = None
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), alias="createdAt")

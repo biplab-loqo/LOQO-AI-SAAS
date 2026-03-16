@@ -38,6 +38,7 @@ from copy import deepcopy
 from bson import ObjectId
 
 from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic_core import ValidationError as PydanticCoreValidationError
 from pydantic import BaseModel
 
 from app.core.auth import get_current_user, get_current_user_optional
@@ -60,7 +61,10 @@ router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 async def _resolve_ctx_id(execution_id: str):
     """Get execution and its ID used to query sub-collections (stepVersions, messages)."""
-    execution = await WorkflowExecution.get(execution_id)
+    try:
+        execution = await WorkflowExecution.get(execution_id)
+    except (ValueError, TypeError, PydanticCoreValidationError):
+        raise HTTPException(404, "Execution not found")
     if not execution:
         raise HTTPException(404, "Execution not found")
     # Always use the execution's own _id to query step versions —
@@ -276,6 +280,7 @@ async def get_step_history(
             "step_version_id": str(sv.id),
             "version_no": sv.version_no,
             "status": sv.status,
+            "is_approved": bool(getattr(sv, "is_approved", False)),
             "lineage": sv.lineage.model_dump(by_alias=True, mode="json") if sv.lineage else None,
             "has_output": sv.output is not None,
             "created_at": sv.created_at.isoformat(),
@@ -315,6 +320,7 @@ async def edit_step(
         "step_key": new_sv.step_key,
         "version_no": new_sv.version_no,
         "status": new_sv.status,
+        "is_approved": bool(getattr(new_sv, "is_approved", False)),
         "lineage": new_sv.lineage.model_dump(by_alias=True, mode="json") if new_sv.lineage else None,
         "created_at": new_sv.created_at.isoformat(),
     }
@@ -539,6 +545,7 @@ async def get_step_version_by_id(
         "step_key": sv.step_key,
         "version_no": sv.version_no,
         "status": sv.status,
+        "is_approved": bool(getattr(sv, "is_approved", False)),
         "lineage": sv.lineage.model_dump(by_alias=True, mode="json") if sv.lineage else None,
         "output": _convert_s3_uris_in_output(sv.output),
         "error": sv.error,
@@ -562,26 +569,32 @@ async def get_shots(
     """Get shot rows for an execution from the independent `shots` collection."""
     _, ctx_id = await _resolve_ctx_id(execution_id)
 
+    # Use raw collection reads to avoid strict model parsing failures from
+    # legacy/partial rows while keeping endpoint behavior stable.
     query: Dict[str, Any] = {"executionId": ctx_id}
     if part_id:
         query["partId"] = part_id
 
-    rows = await Shot.find(query).sort([("shotId", 1), ("version", -1), ("sequenceNo", 1)]).to_list()
+    coll = Shot.get_pymongo_collection()
+    rows = await coll.find(query).sort([("updatedAt", -1), ("version", -1)]).to_list(length=None)
+    rows = [_normalize_shot_row(row) for row in rows]
+    rows = [row for row in rows if row.get("shotId") and row.get("sequenceNo") is not None]
 
     if latest_only:
-        latest_by_shot: Dict[str, Shot] = {}
+        latest_by_shot: Dict[str, Dict[str, Any]] = {}
         for row in rows:
-            if row.shot_id not in latest_by_shot:
-                latest_by_shot[row.shot_id] = row
+            shot_key = str(row.get("shotId") or "")
+            if shot_key and shot_key not in latest_by_shot:
+                latest_by_shot[shot_key] = row
         rows = list(latest_by_shot.values())
 
-    rows.sort(key=lambda r: (r.sequence_no or 0, r.shot_id))
+    rows.sort(key=lambda r: (int(r.get("sequenceNo") or 0), str(r.get("shotId") or "")))
 
     out: List[Dict[str, Any]] = []
     for row in rows:
-        d = row.model_dump(by_alias=True, mode="json")
-        d["id"] = str(row.id)
-        d["executionId"] = str(row.execution_id) if row.execution_id else None
+        d = _to_jsonable(row)
+        d["id"] = str(d.pop("_id")) if d.get("_id") else None
+        d["executionId"] = str(d.get("executionId")) if d.get("executionId") else None
         out.append(d)
     return out
 
@@ -596,26 +609,32 @@ async def get_clips(
     """Get clip rows for an execution from the independent `clips` collection."""
     _, ctx_id = await _resolve_ctx_id(execution_id)
 
+    # Use raw collection reads to avoid strict model parsing failures from
+    # legacy/partial rows while keeping endpoint behavior stable.
     query: Dict[str, Any] = {"executionId": ctx_id}
     if part_id:
         query["partId"] = part_id
 
-    rows = await Clip.find(query).sort([("clipId", 1), ("version", -1), ("sequenceNo", 1)]).to_list()
+    coll = Clip.get_pymongo_collection()
+    rows = await coll.find(query).sort([("updatedAt", -1), ("version", -1)]).to_list(length=None)
+    rows = [_normalize_clip_row(row) for row in rows]
+    rows = [row for row in rows if row.get("clipId") and row.get("sequenceNo") is not None]
 
     if latest_only:
-        latest_by_clip: Dict[str, Clip] = {}
+        latest_by_clip: Dict[str, Dict[str, Any]] = {}
         for row in rows:
-            if row.clip_id not in latest_by_clip:
-                latest_by_clip[row.clip_id] = row
+            clip_key = str(row.get("clipId") or "")
+            if clip_key and clip_key not in latest_by_clip:
+                latest_by_clip[clip_key] = row
         rows = list(latest_by_clip.values())
 
-    rows.sort(key=lambda r: (r.sequence_no or 0, r.clip_id))
+    rows.sort(key=lambda r: (int(r.get("sequenceNo") or 0), str(r.get("clipId") or "")))
 
     out: List[Dict[str, Any]] = []
     for row in rows:
-        d = row.model_dump(by_alias=True, mode="json")
-        d["id"] = str(row.id)
-        d["executionId"] = str(row.execution_id) if row.execution_id else None
+        d = _to_jsonable(row)
+        d["id"] = str(d.pop("_id")) if d.get("_id") else None
+        d["executionId"] = str(d.get("executionId")) if d.get("executionId") else None
         out.append(d)
     return out
 
@@ -656,6 +675,130 @@ def _to_jsonable(value: Any) -> Any:
     return value
 
 
+def _normalize_shot_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Map legacy snake_case shot docs to current camelCase response shape."""
+    d = dict(row)
+    if not d.get("shotId") and d.get("shot_id"):
+        d["shotId"] = d.get("shot_id")
+    if not d.get("shotId") and d.get("shot_number") is not None:
+        try:
+            d["shotId"] = f"shot_{int(d.get('shot_number')):02d}"
+        except Exception:
+            d["shotId"] = str(d.get("shot_number"))
+    if d.get("sequenceNo") is None and d.get("sequence_no") is not None:
+        d["sequenceNo"] = d.get("sequence_no")
+    if d.get("sequenceNo") is None and d.get("shot_number") is not None:
+        d["sequenceNo"] = d.get("shot_number")
+
+    if d.get("shotMetadata") is None and isinstance(d.get("shot_metadata"), dict):
+        m = dict(d.get("shot_metadata") or {})
+        if "shot_number" in m and "shotNumber" not in m:
+            m["shotNumber"] = m.get("shot_number")
+        if "beat_number" in m and "beatNumber" not in m:
+            m["beatNumber"] = m.get("beat_number")
+        d["shotMetadata"] = m
+    if d.get("shotMetadata") is None and d.get("shot_number") is not None:
+        d["shotMetadata"] = {"shotNumber": d.get("shot_number")}
+
+    if d.get("oneLinerShotIntent") is None and d.get("one_liner_shot_intent"):
+        d["oneLinerShotIntent"] = d.get("one_liner_shot_intent")
+    if d.get("startImagePrompt") is None and d.get("start_image_prompt"):
+        d["startImagePrompt"] = d.get("start_image_prompt")
+
+    if d.get("startImage") is None and isinstance(d.get("start_image"), dict):
+        m = dict(d.get("start_image") or {})
+        if "object_id" in m and "objectId" not in m:
+            m["objectId"] = m.get("object_id")
+        if "display_name" in m and "displayName" not in m:
+            m["displayName"] = m.get("display_name")
+        if "aws_url" in m and "awsUrl" not in m:
+            m["awsUrl"] = m.get("aws_url")
+        d["startImage"] = m
+
+    if d.get("characterReferences") is None and isinstance(d.get("character_references"), list):
+        refs = []
+        for r in d.get("character_references") or []:
+            rr = dict(r)
+            if "character_id" in rr and "characterId" not in rr:
+                rr["characterId"] = rr.get("character_id")
+            if "reference_image" in rr and "referenceImage" not in rr:
+                rr["referenceImage"] = rr.get("reference_image")
+            if "display_name" in rr and "displayName" not in rr:
+                rr["displayName"] = rr.get("display_name")
+            if "aws_url" in rr and "awsUrl" not in rr:
+                rr["awsUrl"] = rr.get("aws_url")
+            refs.append(rr)
+        d["characterReferences"] = refs
+
+    if d.get("locationReferences") is None and isinstance(d.get("location_references"), list):
+        refs = []
+        for r in d.get("location_references") or []:
+            rr = dict(r)
+            if "location_id" in rr and "locationId" not in rr:
+                rr["locationId"] = rr.get("location_id")
+            if "reference_image" in rr and "referenceImage" not in rr:
+                rr["referenceImage"] = rr.get("reference_image")
+            if "display_name" in rr and "displayName" not in rr:
+                rr["displayName"] = rr.get("display_name")
+            if "aws_url" in rr and "awsUrl" not in rr:
+                rr["awsUrl"] = rr.get("aws_url")
+            refs.append(rr)
+        d["locationReferences"] = refs
+
+    if d.get("previousReferences") is None and isinstance(d.get("previous_references"), list):
+        refs = []
+        for r in d.get("previous_references") or []:
+            rr = dict(r)
+            if "reference_image" in rr and "referenceImage" not in rr:
+                rr["referenceImage"] = rr.get("reference_image")
+            if "display_name" in rr and "displayName" not in rr:
+                rr["displayName"] = rr.get("display_name")
+            if "aws_url" in rr and "awsUrl" not in rr:
+                rr["awsUrl"] = rr.get("aws_url")
+            refs.append(rr)
+        d["previousReferences"] = refs
+
+    return d
+
+
+def _normalize_clip_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Map legacy snake_case clip docs to current camelCase response shape."""
+    d = dict(row)
+    if not d.get("clipId") and d.get("clip_id"):
+        d["clipId"] = d.get("clip_id")
+    if not d.get("shotId") and d.get("shot_id"):
+        d["shotId"] = d.get("shot_id")
+    if d.get("sequenceNo") is None and d.get("sequence_no") is not None:
+        d["sequenceNo"] = d.get("sequence_no")
+    if d.get("animationPrompt") is None and d.get("animation_prompt"):
+        d["animationPrompt"] = d.get("animation_prompt")
+
+    if d.get("clipOutput") is None and isinstance(d.get("clip_output"), dict):
+        m = dict(d.get("clip_output") or {})
+        if "object_id" in m and "objectId" not in m:
+            m["objectId"] = m.get("object_id")
+        if "display_name" in m and "displayName" not in m:
+            m["displayName"] = m.get("display_name")
+        if "aws_url" in m and "awsUrl" not in m:
+            m["awsUrl"] = m.get("aws_url")
+        d["clipOutput"] = m
+
+    if d.get("inputImages") is None and isinstance(d.get("input_images"), list):
+        imgs = []
+        for r in d.get("input_images") or []:
+            rr = dict(r)
+            if "object_id" in rr and "objectId" not in rr:
+                rr["objectId"] = rr.get("object_id")
+            if "display_name" in rr and "displayName" not in rr:
+                rr["displayName"] = rr.get("display_name")
+            if "aws_url" in rr and "awsUrl" not in rr:
+                rr["awsUrl"] = rr.get("aws_url")
+            imgs.append(rr)
+        d["inputImages"] = imgs
+
+    return d
+
+
 def _character_identity_key(row: Character) -> str:
     d = row.character_description or {}
     return str(
@@ -672,11 +815,53 @@ def _location_identity_key(row: Location) -> str:
     d = row.location_description or {}
     return str(
         d.get("location_id")
+        or d.get("name_identifier")
+        or d.get("name_id")
         or d.get("name")
         or d.get("location_name")
         or d.get("display_name")
         or row.id
     )
+
+
+async def _all_latest_characters_approved(ctx_id: str) -> bool:
+    rows = await Character.find({"$or": [{"execution_id": ctx_id}, {"executionId": ctx_id}]}).sort([("version", -1)]).to_list()
+    latest: Dict[str, Character] = {}
+    for row in rows:
+        key = _character_identity_key(row)
+        if key not in latest:
+            latest[key] = row
+    return bool(latest) and all(bool(getattr(r, "is_approved", False)) for r in latest.values())
+
+
+async def _all_latest_locations_approved(ctx_id: str) -> bool:
+    rows = await Location.find({"$or": [{"execution_id": ctx_id}, {"executionId": ctx_id}]}).sort([("version", -1)]).to_list()
+    latest: Dict[str, Location] = {}
+    for row in rows:
+        key = _location_identity_key(row)
+        if key not in latest:
+            latest[key] = row
+    return bool(latest) and all(bool(getattr(r, "is_approved", False)) for r in latest.values())
+
+
+async def _all_latest_shots_approved(ctx_id: str) -> bool:
+    rows = await Shot.find({"executionId": PydanticObjectId(ctx_id)}).sort([("version", -1)]).to_list()
+    latest: Dict[str, Shot] = {}
+    for row in rows:
+        key = str(getattr(row, "shot_id", "") or "")
+        if key and key not in latest:
+            latest[key] = row
+    return bool(latest) and all(bool(getattr(r, "is_approved", False)) for r in latest.values())
+
+
+async def _all_latest_clips_approved(ctx_id: str) -> bool:
+    rows = await Clip.find({"executionId": PydanticObjectId(ctx_id)}).sort([("version", -1)]).to_list()
+    latest: Dict[str, Clip] = {}
+    for row in rows:
+        key = str(getattr(row, "clip_id", "") or "")
+        if key and key not in latest:
+            latest[key] = row
+    return bool(latest) and all(bool(getattr(r, "is_approved", False)) for r in latest.values())
 
 
 @router.get("/{execution_id}/characters")
@@ -870,6 +1055,23 @@ async def approve_character_version(
     await target.sync()
     d = _normalize_media_refs(_to_jsonable(target.model_dump(mode="python")))
     d["id"] = str(target.id)
+
+    if await _all_latest_characters_approved(str(ctx_id)):
+        try:
+            workflow_result = await WorkflowEngine.approve_step(
+                execution_id=str(ctx_id),
+                step_key="generate_view_pack_images_for_character",
+                user_id=str(user.id),
+                org_id=str(getattr(target, "org_id", "") or ""),
+                project_id=str(getattr(target, "project_id", "") or ""),
+                episode_id=str(getattr(target, "episode_id", "") or ""),
+                part_id=str(getattr(target, "part_id", "") or ""),
+            )
+            d["workflow_advanced"] = True
+            d["workflow"] = workflow_result
+        except Exception:
+            d["workflow_advanced"] = False
+
     return d
 
 
@@ -986,6 +1188,23 @@ async def approve_location_version(
     await target.sync()
     d = _normalize_media_refs(_to_jsonable(target.model_dump(mode="python")))
     d["id"] = str(target.id)
+
+    if await _all_latest_locations_approved(str(ctx_id)):
+        try:
+            workflow_result = await WorkflowEngine.approve_step(
+                execution_id=str(ctx_id),
+                step_key="generate_view_pack_images_for_key_location",
+                user_id=str(user.id),
+                org_id=str(getattr(target, "org_id", "") or ""),
+                project_id=str(getattr(target, "project_id", "") or ""),
+                episode_id=str(getattr(target, "episode_id", "") or ""),
+                part_id=str(getattr(target, "part_id", "") or ""),
+            )
+            d["workflow_advanced"] = True
+            d["workflow"] = workflow_result
+        except Exception:
+            d["workflow_advanced"] = False
+
     return d
 
 
@@ -1192,6 +1411,23 @@ async def approve_shot_version(
     d = target.model_dump(by_alias=True, mode="json")
     d["id"] = str(target.id)
     d["executionId"] = str(target.execution_id) if target.execution_id else None
+
+    if await _all_latest_shots_approved(str(ctx_id)):
+        try:
+            workflow_result = await WorkflowEngine.approve_step(
+                execution_id=str(ctx_id),
+                step_key="generate_images_nano_banana",
+                user_id=str(user.id),
+                org_id=str(getattr(target, "org_id", "") or ""),
+                project_id=str(getattr(target, "project_id", "") or ""),
+                episode_id=str(getattr(target, "episode_id", "") or ""),
+                part_id=str(getattr(target, "part_id", "") or ""),
+            )
+            d["workflow_advanced"] = True
+            d["workflow"] = workflow_result
+        except Exception:
+            d["workflow_advanced"] = False
+
     return d
 
 
@@ -1232,5 +1468,22 @@ async def approve_clip_version(
     d = target.model_dump(by_alias=True, mode="json")
     d["id"] = str(target.id)
     d["executionId"] = str(target.execution_id) if target.execution_id else None
+
+    if await _all_latest_clips_approved(str(ctx_id)):
+        try:
+            workflow_result = await WorkflowEngine.approve_step(
+                execution_id=str(ctx_id),
+                step_key="generate_animations",
+                user_id=str(user.id),
+                org_id=str(getattr(target, "org_id", "") or ""),
+                project_id=str(getattr(target, "project_id", "") or ""),
+                episode_id=str(getattr(target, "episode_id", "") or ""),
+                part_id=str(getattr(target, "part_id", "") or ""),
+            )
+            d["workflow_advanced"] = True
+            d["workflow"] = workflow_result
+        except Exception:
+            d["workflow_advanced"] = False
+
     return d
 

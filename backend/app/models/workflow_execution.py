@@ -11,6 +11,7 @@ class ExecutionStepSummary(BaseModel):
     """Embedded step entry inside a WorkflowExecution."""
     step_key: str = Field(alias="stepKey")
     status: str = "not_started"
+    is_approved: bool = Field(False, alias="isApproved")
     updated_at: Optional[datetime] = Field(None, alias="updatedAt")
     started_at: Optional[datetime] = Field(None, alias="startedAt")
     ended_at: Optional[datetime] = Field(None, alias="endedAt")

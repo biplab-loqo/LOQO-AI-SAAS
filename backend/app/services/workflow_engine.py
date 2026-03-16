@@ -366,6 +366,7 @@ class WorkflowEngine:
             steps_status.append({
                 "step_key": step_summary.step_key,
                 "status": latest_sv.status if latest_sv else step_summary.status,
+                "is_approved": (latest_sv.is_approved if latest_sv else getattr(step_summary, "is_approved", False)),
                 "version_no": latest_sv.version_no if latest_sv else 0,
                 "has_data": (latest_sv.output is not None) if latest_sv else False,
                 "step_version_id": str(latest_sv.id) if latest_sv else None,
@@ -412,6 +413,7 @@ class WorkflowEngine:
             "step_key": sv.step_key,
             "version_no": sv.version_no,
             "status": sv.status,
+            "is_approved": sv.is_approved,
             "lineage": sv.lineage.model_dump(by_alias=True, mode="json") if sv.lineage else None,
             "input": sv.input,  # Include input from v7 schema
             "output": _convert_s3_uris_in_output(sv.output),
@@ -764,24 +766,24 @@ class WorkflowEngine:
         if target_idx is None:
             raise ValueError(f"Step '{step_key}' not found in execution")
 
-        # Approve the target step + any succeeded predecessors not yet approved
+        # Mark target step + succeeded predecessors as approved (boolean flag only)
         approved_keys = []
         for i in range(target_idx + 1):
             s = execution.steps[i]
             if s.status in ("succeeded", "running"):
-                s.status = "approved"
+                s.is_approved = True
                 s.updated_at = now
                 approved_keys.append(s.step_key)
 
         execution.updated_at = now
 
-        # Also update head StepVersions to "approved"
+        # Also update head StepVersions approval boolean
         for sk in approved_keys:
             sv = await StepVersion.find(
                 {"executionId": exec_id, "stepKey": sk}
             ).sort("-versionNo").first_or_none()
             if sv:
-                sv.status = "approved"
+                sv.is_approved = True
                 sv.updated_at = now
                 await sv.save()
 
@@ -828,19 +830,7 @@ class WorkflowEngine:
 
         await execution.save()
 
-        # Seed independent shot/clip rows when storyboard is approved
-        # (so Shot/Animation tabs can read from dedicated collections).
-        if step_key in {"run_beat_breakdown", "run_storyboard_prompt"}:
-            try:
-                await _seed_demo_shots_and_clips_if_empty(
-                    execution,
-                    org_id=org_id,
-                    project_id=project_id,
-                    episode_id=episode_id,
-                    part_id=part_id,
-                )
-            except Exception as seed_err:
-                logger.warning("Shot/clip seed skipped for execution=%s: %s", execution_id, seed_err)
+        # Shot/clip rows are materialized by the local processor script from real DB examples.
 
         if next_step_chain:
             # ── Save one Message with the full stepKey chain ──

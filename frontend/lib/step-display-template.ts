@@ -22,7 +22,7 @@ export interface TabTemplate {
   /**
    * Layout strategy:
    *   'universal'   — standard UniversalRenderer (single step data)
-   *   'entity-page' — merged entity view with description → anchor → view pack
+    *   'entity-page' — merged entity view with description → anchor → reference images
    *   'shots'       — per-shot view merging storyboard metadata + generated images
    */
   layout: 'universal' | 'entity-page' | 'shots' | 'animations'
@@ -61,7 +61,7 @@ export const STEP_DISPLAY_TEMPLATE: TabTemplate[] = [
     ],
     layout: 'entity-page',
     entityKey: 'Characters',
-    subStepLabels: ['Character Designs', 'Anchor Images', 'View Pack Images'],
+    subStepLabels: ['Character Designs', 'Anchor Images', 'Reference Images'],
   },
   {
     tabKey: 'locations',
@@ -74,7 +74,7 @@ export const STEP_DISPLAY_TEMPLATE: TabTemplate[] = [
     ],
     layout: 'entity-page',
     entityKey: 'Key_Locations',
-    subStepLabels: ['Key Locations', 'Anchor Images', 'View Pack Images'],
+    subStepLabels: ['Key Locations', 'Anchor Images', 'Reference Images'],
   },
   {
     tabKey: 'beat_breakdown',

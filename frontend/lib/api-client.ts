@@ -4,7 +4,7 @@
  */
 import { safeStorage } from '@/lib/safe-storage'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api/v1'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
 
 // ─────────────────────────────────────────────────────────────
 //  TYPE DEFINITIONS
@@ -56,6 +56,7 @@ export interface ProjectFullOut extends ProjectOut {
 export interface ExecutionStepSummary {
   step_key: string
   status: string
+  is_approved?: boolean
   version_no: number
   has_data: boolean
   step_version_id: string | null
@@ -98,6 +99,7 @@ export interface StepData {
   step_key: string
   version_no: number
   status: string
+  is_approved?: boolean
   lineage: StepVersionLineage | null
   input: Record<string, any> | null     // v7 schema: step input/config
   output: Record<string, any> | null
@@ -109,6 +111,7 @@ export interface StepHistoryEntry {
   step_version_id: string
   version_no: number
   status: string
+  is_approved?: boolean
   lineage: StepVersionLineage | null
   has_output: boolean
   created_at: string
