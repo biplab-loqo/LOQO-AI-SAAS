@@ -568,12 +568,24 @@ async def get_shots(
 ):
     """Get shot rows for an execution from the independent `shots` collection."""
     _, ctx_id = await _resolve_ctx_id(execution_id)
+    ctx_str = str(ctx_id)
 
     # Use raw collection reads to avoid strict model parsing failures from
     # legacy/partial rows while keeping endpoint behavior stable.
-    query: Dict[str, Any] = {"executionId": ctx_id}
+    exec_or: List[Dict[str, Any]] = [
+        {"executionId": ctx_id},
+        {"executionId": ctx_str},
+        {"execution_id": ctx_str},
+    ]
     if part_id:
-        query["partId"] = part_id
+        query: Dict[str, Any] = {
+            "$and": [
+                {"$or": exec_or},
+                {"$or": [{"partId": part_id}, {"part_id": part_id}]},
+            ]
+        }
+    else:
+        query = {"$or": exec_or}
 
     coll = Shot.get_pymongo_collection()
     rows = await coll.find(query).sort([("updatedAt", -1), ("version", -1)]).to_list(length=None)
@@ -594,6 +606,10 @@ async def get_shots(
     for row in rows:
         d = _to_jsonable(row)
         d["id"] = str(d.pop("_id")) if d.get("_id") else None
+        if not d.get("executionId") and d.get("execution_id"):
+            d["executionId"] = d.get("execution_id")
+        if not d.get("partId") and d.get("part_id"):
+            d["partId"] = d.get("part_id")
         d["executionId"] = str(d.get("executionId")) if d.get("executionId") else None
         out.append(d)
     return out
@@ -608,12 +624,24 @@ async def get_clips(
 ):
     """Get clip rows for an execution from the independent `clips` collection."""
     _, ctx_id = await _resolve_ctx_id(execution_id)
+    ctx_str = str(ctx_id)
 
     # Use raw collection reads to avoid strict model parsing failures from
     # legacy/partial rows while keeping endpoint behavior stable.
-    query: Dict[str, Any] = {"executionId": ctx_id}
+    exec_or: List[Dict[str, Any]] = [
+        {"executionId": ctx_id},
+        {"executionId": ctx_str},
+        {"execution_id": ctx_str},
+    ]
     if part_id:
-        query["partId"] = part_id
+        query: Dict[str, Any] = {
+            "$and": [
+                {"$or": exec_or},
+                {"$or": [{"partId": part_id}, {"part_id": part_id}]},
+            ]
+        }
+    else:
+        query = {"$or": exec_or}
 
     coll = Clip.get_pymongo_collection()
     rows = await coll.find(query).sort([("updatedAt", -1), ("version", -1)]).to_list(length=None)
@@ -634,6 +662,10 @@ async def get_clips(
     for row in rows:
         d = _to_jsonable(row)
         d["id"] = str(d.pop("_id")) if d.get("_id") else None
+        if not d.get("executionId") and d.get("execution_id"):
+            d["executionId"] = d.get("execution_id")
+        if not d.get("partId") and d.get("part_id"):
+            d["partId"] = d.get("part_id")
         d["executionId"] = str(d.get("executionId")) if d.get("executionId") else None
         out.append(d)
     return out
@@ -672,6 +704,17 @@ def _to_jsonable(value: Any) -> Any:
         return [_to_jsonable(v) for v in value]
     if isinstance(value, dict):
         return {k: _to_jsonable(v) for k, v in value.items()}
+    return value
+
+
+def _deep_convert_s3_uris(value: Any) -> Any:
+    """Recursively convert `s3://...` strings into browser-safe URLs."""
+    if isinstance(value, str):
+        return _s3uri_to_url(value) if value.startswith("s3://") else value
+    if isinstance(value, list):
+        return [_deep_convert_s3_uris(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _deep_convert_s3_uris(v) for k, v in value.items()}
     return value
 
 
@@ -758,7 +801,7 @@ def _normalize_shot_row(row: Dict[str, Any]) -> Dict[str, Any]:
             refs.append(rr)
         d["previousReferences"] = refs
 
-    return d
+    return _deep_convert_s3_uris(d)
 
 
 def _normalize_clip_row(row: Dict[str, Any]) -> Dict[str, Any]:
@@ -770,8 +813,22 @@ def _normalize_clip_row(row: Dict[str, Any]) -> Dict[str, Any]:
         d["shotId"] = d.get("shot_id")
     if d.get("sequenceNo") is None and d.get("sequence_no") is not None:
         d["sequenceNo"] = d.get("sequence_no")
+    if d.get("sequenceNo") is None and d.get("shot_number") is not None:
+        d["sequenceNo"] = d.get("shot_number")
     if d.get("animationPrompt") is None and d.get("animation_prompt"):
         d["animationPrompt"] = d.get("animation_prompt")
+    if not d.get("shotId") and d.get("shot_number") is not None:
+        try:
+            d["shotId"] = f"shot_{int(d.get('shot_number')):02d}"
+        except Exception:
+            d["shotId"] = str(d.get("shot_number"))
+    if not d.get("clipId"):
+        if d.get("clip_id"):
+            d["clipId"] = d.get("clip_id")
+        elif d.get("shotId") and d.get("version") is not None:
+            d["clipId"] = f"{d.get('shotId')}_v{d.get('version')}"
+        elif d.get("shotId"):
+            d["clipId"] = f"{d.get('shotId')}_clip"
 
     if d.get("clipOutput") is None and isinstance(d.get("clip_output"), dict):
         m = dict(d.get("clip_output") or {})
@@ -796,7 +853,7 @@ def _normalize_clip_row(row: Dict[str, Any]) -> Dict[str, Any]:
             imgs.append(rr)
         d["inputImages"] = imgs
 
-    return d
+    return _deep_convert_s3_uris(d)
 
 
 def _character_identity_key(row: Character) -> str:

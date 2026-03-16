@@ -54,26 +54,12 @@ function KV({ label, value, accent }: { label: string; value?: string | null; ac
   if (!value) return null
   // Parse \n in strings as real line breaks
   const parts = value.split(/\\n|\n/)
-  const isTruncated = parts.length === 1 && parts[0].length > 80
   return (
-    <div className="flex items-start gap-2 py-0.5">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70 flex-shrink-0 min-w-[80px]">{label}</span>
-      {isTruncated ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-wrap truncate cursor-help block max-w-[300px]">
-              {parts[0]}...
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="max-w-md text-wrap">
-            {value}
-          </TooltipContent>
-        </Tooltip>
-      ) : (
-        <span className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-wrap">
-          {parts.map((p, i) => (<React.Fragment key={i}>{p}{i < parts.length - 1 && <br />}</React.Fragment>))}
-        </span>
-      )}
+    <div className="grid grid-cols-[minmax(110px,32%)_minmax(0,1fr)] gap-1.5 py-0.5 items-start max-w-full">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70 whitespace-normal break-words leading-tight">{label}</span>
+      <span className="min-w-0 text-[13px] text-foreground/80 leading-relaxed whitespace-pre-wrap break-words">
+        {parts.map((p, i) => (<React.Fragment key={i}>{p}{i < parts.length - 1 && <br />}</React.Fragment>))}
+      </span>
     </div>
   )
 }
@@ -130,7 +116,10 @@ function StepCard({ p, width = 280, idx = 0, header, children, isApproved = fals
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
       className="flex-shrink-0 rounded-2xl border-2 border-border/50 bg-card overflow-hidden transition-all duration-300 shadow-[0_2px_8px_0_rgb(0_0_0/0.12)] hover:shadow-[0_4px_16px_0_rgb(0_0_0/0.16)] hover:border-border/70 dark:shadow-[0_2px_8px_0_rgb(0_0_0/0.3)]"
       style={{ width }}>
-      <div className="p-4 border-b-2 border-border/30 bg-gradient-to-r from-secondary/20 to-secondary/5 relative">
+      <div className={cn(
+        'p-4 border-b-2 border-border/30 bg-gradient-to-r from-secondary/20 to-secondary/5 relative',
+        (isApproved || onRequestEdit) && 'pr-24'
+      )}>
         {header}
         {isApproved && (
           <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg border border-green-500/30 bg-green-500/10 text-green-500">
@@ -525,7 +514,7 @@ function LabeledImageGrid({ images, onIterateImage, isAnchor = false }: { images
   if (!images.length) return null
   
   if (isAnchor) {
-    // Anchor images: show iterate button as overlay on hover
+    // Anchor images: show iterate button at top-right (same style as reference grid)
     return (
       <ImageGalleryCtx.Provider value={galleryCtx}>
         <div className="mt-2 grid grid-cols-2 gap-3">
@@ -534,12 +523,11 @@ function LabeledImageGrid({ images, onIterateImage, isAnchor = false }: { images
               <S3Image url={img.url} label={img.label} className="w-full rounded-xl" />
               {onIterateImage && (
                 <button
+                  type="button"
                   onClick={() => onIterateImage(img)}
-                  className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-white font-semibold hover:bg-black/80 transition-all"
                 >
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-accent-foreground text-[11px] font-semibold">
-                    <RefreshCw size={12} /> Iterate
-                  </div>
+                  <RefreshCw size={9} /> Iterate
                 </button>
               )}
               <span className="absolute bottom-2 left-2 right-2 text-[9px] font-medium text-white bg-black/60 px-2 py-1 rounded truncate">{img.label}</span>
@@ -621,7 +609,7 @@ function CollageImageGridLabeled({ images, onIterateImage }: { images: LabeledIm
             <button
               type="button"
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onIterateImage(img) }}
-              className="absolute top-1 left-1 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-white font-semibold hover:bg-black/80 transition-all"
+              className="absolute top-1 right-1 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-white font-semibold hover:bg-black/80 transition-all"
             >
               <RefreshCw size={9} /> Iterate
             </button>
@@ -1080,8 +1068,6 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
   const template = STEP_DISPLAY_TEMPLATE.find(t => t.tabKey === tabKey)
   if (!template) return null
 
-  const [imageMode, setImageMode] = useState<'anchor' | 'reference'>('anchor')
-
   // Per entity-page layout: stepKeys[0]=description, [1]=anchor, [2]=reference-images
   const descriptionStepKey = template.stepKeys[0]
   const anchorStepKey = template.stepKeys[1]
@@ -1159,10 +1145,6 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
           const anchorImgs = getAnchorImages(entity.name)
           const viewPackImgs = getViewPackImages(entity.name)
           const hasDescription = !!entity.props && Object.keys(entity.props).length > 0
-          const activeImageMode: 'anchor' | 'reference' =
-            anchorImgs.length > 0
-              ? (viewPackImgs.length > 0 ? imageMode : 'anchor')
-              : 'reference'
 
           return (
             <StepCard key={entity.name} p={p} width={420} idx={idx}
@@ -1200,38 +1182,8 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
                   </div>
                 )}
 
-                {/* ── Image Type Toggle (only show if both types available) ────────────────────────── */}
-                {anchorImgs.length > 0 && viewPackImgs.length > 0 && (
-                  <div className="px-4 pt-3 pb-3 flex gap-2 border-t border-border/20">
-                    <button
-                      onClick={() => setImageMode('anchor')}
-                      className={cn(
-                        'flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all',
-                        imageMode === 'anchor'
-                          ? 'bg-accent text-accent-foreground shadow-sm'
-                          : 'bg-secondary/40 text-foreground/70 hover:bg-secondary/60'
-                      )}
-                    >
-                      <ImageIcon size={12} className="inline mr-1" />
-                      Anchor
-                    </button>
-                    <button
-                      onClick={() => setImageMode('reference')}
-                      className={cn(
-                        'flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all',
-                        imageMode === 'reference'
-                          ? 'bg-accent text-accent-foreground shadow-sm'
-                          : 'bg-secondary/40 text-foreground/70 hover:bg-secondary/60'
-                      )}
-                    >
-                      <Layers size={12} className="inline mr-1" />
-                      Reference
-                    </button>
-                  </div>
-                )}
-
-                {/* ── Anchor Images (show only when imageMode is anchor and available) ────────────────────────── */}
-                {anchorImgs.length > 0 && activeImageMode === 'anchor' && (
+                {/* ── Anchor Images ────────────────────────── */}
+                {anchorImgs.length > 0 && (
                   <div className="px-4 pb-4 pt-3">
                     <div className="flex items-center gap-2 mb-3 pb-2">
                       <ImageIcon size={14} className={p.accent} />
@@ -1241,7 +1193,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
                       ? <LabeledImageGrid
                           images={anchorImgs as LabeledImage[]}
                           isAnchor={true}
-                          onIterateImage={anchorStepKey
+                          onIterateImage={anchorStepKey && !anchorApproved
                             ? (image) => onIterateImage?.({
                                 stepKey: anchorStepKey,
                                 anchorStepKey,
@@ -1257,7 +1209,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
                       : <LabeledImageGrid
                           images={(anchorImgs as string[]).map((url, i) => ({ url, label: `Anchor ${i + 1}` }))}
                           isAnchor={true}
-                          onIterateImage={anchorStepKey
+                          onIterateImage={anchorStepKey && !anchorApproved
                             ? (image) => onIterateImage?.({
                                 stepKey: anchorStepKey,
                                 anchorStepKey,
@@ -1274,8 +1226,8 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
                   </div>
                 )}
 
-                {/* ── Reference Images (show only when imageMode is reference and available) ─────────────────────── */}
-                {viewPackImgs.length > 0 && activeImageMode === 'reference' && (
+                {/* ── Reference Images ─────────────────────── */}
+                {viewPackImgs.length > 0 && (
                   <div className="px-4 pb-4 pt-3">
                     <div className="flex items-center gap-2 mb-3 pb-2">
                       <Layers size={14} className={p.accent} />
@@ -1284,7 +1236,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
                     {Array.isArray(viewPackImgs) && typeof viewPackImgs[0] === 'object' && 'label' in (viewPackImgs[0] as any)
                       ? <CollageImageGridLabeled
                           images={viewPackImgs as LabeledImage[]}
-                          onIterateImage={viewPackStepKey
+                          onIterateImage={viewPackStepKey && !viewPackApproved
                             ? (image) => onIterateImage?.({
                                 stepKey: viewPackStepKey,
                                 anchorStepKey,
@@ -1299,7 +1251,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
                         />
                       : <CollageImageGridLabeled
                           images={(viewPackImgs as string[]).map((url, i) => ({ url, label: `Reference ${i + 1}` }))}
-                          onIterateImage={viewPackStepKey
+                          onIterateImage={viewPackStepKey && !viewPackApproved
                             ? (image) => onIterateImage?.({
                                 stepKey: viewPackStepKey,
                                 anchorStepKey,
@@ -1343,7 +1295,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
                   <LabeledImageGrid
                     images={chunk.map((url, idx) => ({ url, label: `Anchor ${i * 3 + idx + 1}` }))}
                     isAnchor={true}
-                    onIterateImage={anchorStepKey
+                    onIterateImage={anchorStepKey && !anchorApproved
                       ? (image) => onIterateImage?.({
                           stepKey: anchorStepKey,
                           anchorStepKey,
@@ -1383,7 +1335,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
                 <div className="p-3 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30">
                   <CollageImageGridLabeled
                     images={chunk.map((url, idx) => ({ url, label: `Reference ${i * 3 + idx + 1}` }))}
-                    onIterateImage={viewPackStepKey
+                    onIterateImage={viewPackStepKey && !viewPackApproved
                       ? (image) => onIterateImage?.({
                           stepKey: viewPackStepKey,
                           anchorStepKey,
@@ -1515,14 +1467,9 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
                   <span className="ml-auto text-[10px] font-bold text-foreground/60 bg-secondary rounded-md px-1.5 py-0.5">{group.versions.length} ver</span>
                 </div>
                 {latest?.oneLinerShotIntent && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug line-clamp-1 pl-[34px] cursor-help truncate">{latest.oneLinerShotIntent}</p>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs text-wrap">
-                      {latest.oneLinerShotIntent}
-                    </TooltipContent>
-                  </Tooltip>
+                  <p className="text-[14px] font-medium text-foreground/90 mt-2 leading-relaxed pl-[34px]">
+                    {latest.oneLinerShotIntent}
+                  </p>
                 )}
               </div>
 
@@ -1548,21 +1495,27 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/80 text-white">✓ Approved</span>
                             )}
                           </div>
-                          {/* Edit + Iterate buttons */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => onEditShot?.(shot)}
-                              className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 hover:bg-amber-500/70 backdrop-blur-sm border border-white/15 text-white text-[10px] font-semibold transition-all"
-                            >
-                              <Pencil size={10} /> Edit
-                            </button>
-                            <button
-                              onClick={() => onIterateShot?.(shot)}
-                              className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 hover:bg-violet-500/70 backdrop-blur-sm border border-white/15 text-white text-[10px] font-semibold transition-all"
-                            >
-                              <RefreshCw size={10} /> Iterate
-                            </button>
-                          </div>
+                          {/* Edit + Iterate buttons (hidden when tab is approved) */}
+                          {(onEditShot || onIterateShot) && (
+                            <div className="flex items-center gap-1">
+                              {onEditShot && (
+                                <button
+                                  onClick={() => onEditShot(shot)}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 hover:bg-amber-500/70 backdrop-blur-sm border border-white/15 text-white text-[10px] font-semibold transition-all"
+                                >
+                                  <Pencil size={10} /> Edit
+                                </button>
+                              )}
+                              {onIterateShot && (
+                                <button
+                                  onClick={() => onIterateShot(shot)}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 hover:bg-violet-500/70 backdrop-blur-sm border border-white/15 text-white text-[10px] font-semibold transition-all"
+                                >
+                                  <RefreshCw size={10} /> Iterate
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                         {/* Bottom hover gradient: approve */}
                         {!isApproved && (
@@ -1586,20 +1539,26 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
                         </div>
                         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-2.5 pt-2.5">
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">v{shot.version}</span>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => onEditShot?.(shot)}
-                              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 border border-border/30 text-foreground/70 text-[10px] font-semibold transition-all"
-                            >
-                              <Pencil size={10} /> Edit
-                            </button>
-                            <button
-                              onClick={() => onIterateShot?.(shot)}
-                              className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 border border-border/30 text-foreground/70 text-[10px] font-semibold transition-all"
-                            >
-                              <RefreshCw size={10} /> Iterate
-                            </button>
-                          </div>
+                          {(onEditShot || onIterateShot) && (
+                            <div className="flex items-center gap-1">
+                              {onEditShot && (
+                                <button
+                                  onClick={() => onEditShot(shot)}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 border border-border/30 text-foreground/70 text-[10px] font-semibold transition-all"
+                                >
+                                  <Pencil size={10} /> Edit
+                                </button>
+                              )}
+                              {onIterateShot && (
+                                <button
+                                  onClick={() => onIterateShot(shot)}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 border border-border/30 text-foreground/70 text-[10px] font-semibold transition-all"
+                                >
+                                  <RefreshCw size={10} /> Iterate
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1610,32 +1569,6 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
           )
         })}
       </HScrollContainer>
-
-      {/* Approve & Continue to Animations */}
-      {onApproveShots && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-4 flex items-center gap-3 px-4 py-3 rounded-xl border border-accent/30 bg-accent/5"
-        >
-          <CheckCircle2 size={16} className="text-accent flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">Shots ready for review</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Approve all shots to proceed to animation generation.</p>
-          </div>
-          <Button
-            size="sm"
-            onClick={onApproveShots}
-            disabled={approvingShots}
-            className="flex-shrink-0 gap-1.5"
-          >
-            {approvingShots
-              ? <Loader2 size={12} className="animate-spin" />
-              : <CheckCircle2 size={12} />}
-            {approvingShots ? 'Approving…' : 'Approve & Continue'}
-          </Button>
-        </motion.div>
-      )}
     </div>
   )
 }
@@ -1763,21 +1696,27 @@ function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip }: { 
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/80 text-white">✓ Approved</span>
                           )}
                         </div>
-                        {/* Edit + Iterate buttons */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={e => { e.stopPropagation(); onEditClip?.(clip) }}
-                            className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 hover:bg-amber-500/70 backdrop-blur-sm border border-white/15 text-white text-[10px] font-semibold transition-all"
-                          >
-                            <Pencil size={10} /> Edit
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); onIterateClip?.(clip) }}
-                            className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 hover:bg-violet-500/70 backdrop-blur-sm border border-white/15 text-white text-[10px] font-semibold transition-all"
-                          >
-                            <RefreshCw size={10} /> Iterate
-                          </button>
-                        </div>
+                        {/* Edit + Iterate buttons (hidden when tab is approved) */}
+                        {(onEditClip || onIterateClip) && (
+                          <div className="flex items-center gap-1">
+                            {onEditClip && (
+                              <button
+                                onClick={e => { e.stopPropagation(); onEditClip(clip) }}
+                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 hover:bg-amber-500/70 backdrop-blur-sm border border-white/15 text-white text-[10px] font-semibold transition-all"
+                              >
+                                <Pencil size={10} /> Edit
+                              </button>
+                            )}
+                            {onIterateClip && (
+                              <button
+                                onClick={e => { e.stopPropagation(); onIterateClip(clip) }}
+                                className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 hover:bg-violet-500/70 backdrop-blur-sm border border-white/15 text-white text-[10px] font-semibold transition-all"
+                              >
+                                <RefreshCw size={10} /> Iterate
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {clip.clipOutput?.awsUrl ? (
                         <OptimizedVideo
@@ -2707,12 +2646,19 @@ export default function PartStudioPage() {
 
     // Don't try to load data for steps that haven't been generated yet
     const tabStatus = templateTabs.find(t => t.tabKey === activeTab)?.status
-    if (tabStatus === 'ready' || tabStatus === 'locked' || tabStatus === 'running') return
+    const template = STEP_DISPLAY_TEMPLATE.find(t => t.tabKey === activeTab)
+    if (!template) return
+
+    // Collection-backed tabs can still have data in DB even when workflow status
+    // is locked/ready/running (common in test_v3); allow loading for those.
+    const isCollectionBacked =
+      template.layout === 'entity-page' ||
+      template.layout === 'shots' ||
+      template.layout === 'animations'
+
+    if (!isCollectionBacked && (tabStatus === 'ready' || tabStatus === 'locked' || tabStatus === 'running')) return
 
     setTabLoading(true)
-
-    const template = STEP_DISPLAY_TEMPLATE.find(t => t.tabKey === activeTab)
-    if (!template) { setTabLoading(false); return }
 
     if (template.layout === 'entity-page' && template.stepKeys.length > 1) {
       const toLabeled = (imgs: Array<{ s3_uri?: string; display_name?: string; file_name?: string }>): LabeledImage[] => {
@@ -2944,6 +2890,10 @@ export default function PartStudioPage() {
 
   // ── 5. Active tab info ────────────────────────────────────
   const activeTemplate = useMemo(() => templateTabs.find(t => t.tabKey === activeTab), [templateTabs, activeTab])
+  const approvedStepKeySet = useMemo(
+    () => new Set(execution?.steps.filter(s => !!s.is_approved).map(s => s.step_key) ?? []),
+    [execution],
+  )
   const primaryStepKey = activeTemplate?.stepKeys[0] ?? activeTab
 
   // ── 5a. Approve step handler — approves ONE specific constituent step ──
@@ -3175,15 +3125,14 @@ export default function PartStudioPage() {
                     <button
                       onClick={() => handleTabChange(tab.tabKey)}
                       disabled={false}
-                      title={tab.label}
                       className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-all duration-150',
+                        'flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all duration-150',
                         isActive ? 'bg-accent text-accent-foreground shadow-sm'
                           : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                       )}>
                       {isRunning ? <Loader2 size={12} className="animate-spin opacity-70 flex-shrink-0" />
                         : <Icon size={12} className={cn('flex-shrink-0', isActive ? 'text-accent-foreground' : p.accent)} />}
-                      <span className="truncate max-w-[120px]">{tab.label}</span>
+                      <span className="">{tab.label}</span>
                       {tab.versionNo > 0 && <span className="text-[9px] opacity-60">v{tab.versionNo}</span>}
                       {isRunning && <span className="text-[9px] opacity-60 animate-pulse ml-0.5">&#8226;</span>}
                     </button>
@@ -3219,28 +3168,8 @@ export default function PartStudioPage() {
           ) : (
             <AnimatePresence mode="wait">
               <motion.div key={activeTab + (selectedVersionId[activeTab] ?? '')} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
-                {(activeTemplate?.status === 'locked' || activeTemplate?.status === 'ready') ? (
-                  <LockedStepPlaceholder
-                    stepKey={activeTab}
-                    stepName={activeTemplate?.label ?? stepDisplayName(activeTab)}
-                    canGenerate={activeTemplate?.status === 'ready'}
-                  />
-                ) : activeTemplate?.status === 'running' ? (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center min-h-[320px] gap-5">
-                    <div className="p-5 rounded-2xl bg-accent/10 border border-accent/20">
-                      <Loader2 className="w-10 h-10 text-accent animate-spin" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-base font-semibold text-foreground">{activeTemplate?.label ?? stepDisplayName(activeTab)}</p>
-                      <p className="text-sm text-muted-foreground mt-1.5">{execution && !awaitingExecution ? 'Processing…' : 'Starting…'} this may take a moment.</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20">
-                      <Loader2 size={11} className="text-accent animate-spin" />
-                      <span className="text-[11px] text-accent font-medium">{execution && !awaitingExecution ? 'Running' : 'Initializing'}</span>
-                    </div>
-                  </motion.div>
-                ) : tabData[activeTab] ? (
-                  <>  
+                {tabData[activeTab] ? (
+                  <>
                     {/* ── Approval banner ─────────────────────────────────────────────────
                         Uses tabApprovalState to handle both single-step and multi-step tabs.
                         Multi-step tabs (Characters, Locations) show granular sub-step CTAs:
@@ -3287,7 +3216,7 @@ export default function PartStudioPage() {
                       <EntityPageRenderer
                         data={tabData[activeTab]!}
                         tabKey={activeTab}
-                        approvedStepKeys={new Set(execution?.steps.filter(s => !!s.is_approved).map(s => s.step_key) ?? [])}
+                        approvedStepKeys={approvedStepKeySet}
                         onRequestEditCard={handleEditCard}
                         onIterateImage={(payload) => {
                           setPanelTask({
@@ -3312,22 +3241,47 @@ export default function PartStudioPage() {
                       <ShotsRenderer
                         data={tabData[activeTab]!}
                         executionId={executionId ?? ''}
-                        onEditShot={handleEditShot}
-                        onIterateShot={handleIterateShot}
+                        onEditShot={activeTemplate?.status === 'approved' ? undefined : handleEditShot}
+                        onIterateShot={activeTemplate?.status === 'approved' ? undefined : handleIterateShot}
                         onApproveShots={tabApprovalState?.nextStatus === 'not_started' ? () => handleApprove(tabApprovalState!.approveKey) : undefined}
                         approvingShots={approvingStep === tabApprovalState?.approveKey}
                       />
                     ) : tabData[activeTab]?._layout === 'animations' ? (
-                      <AnimationsRenderer data={tabData[activeTab]!} executionId={executionId ?? ''} onEditClip={handleEditClip} onIterateClip={handleIterateClip} />
+                      <AnimationsRenderer
+                        data={tabData[activeTab]!}
+                        executionId={executionId ?? ''}
+                        onEditClip={activeTemplate?.status === 'approved' ? undefined : handleEditClip}
+                        onIterateClip={activeTemplate?.status === 'approved' ? undefined : handleIterateClip}
+                      />
                     ) : (
                       <UniversalRenderer
                         stepKey={activeTab}
                         data={tabData[activeTab] ?? {}}
-                        approvedStepKeys={new Set(execution?.steps.filter(s => !!s.is_approved).map(s => s.step_key) ?? [])}
+                        approvedStepKeys={approvedStepKeySet}
                         onRequestEditCard={handleEditCard}
                       />
                     )}
                   </>
+                ) : (activeTemplate?.status === 'locked' || activeTemplate?.status === 'ready') ? (
+                  <LockedStepPlaceholder
+                    stepKey={activeTab}
+                    stepName={activeTemplate?.label ?? stepDisplayName(activeTab)}
+                    canGenerate={activeTemplate?.status === 'ready'}
+                  />
+                ) : activeTemplate?.status === 'running' ? (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center min-h-[320px] gap-5">
+                    <div className="p-5 rounded-2xl bg-accent/10 border border-accent/20">
+                      <Loader2 className="w-10 h-10 text-accent animate-spin" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-base font-semibold text-foreground">{activeTemplate?.label ?? stepDisplayName(activeTab)}</p>
+                      <p className="text-sm text-muted-foreground mt-1.5">{execution && !awaitingExecution ? 'Processing…' : 'Starting…'} this may take a moment.</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20">
+                      <Loader2 size={11} className="text-accent animate-spin" />
+                      <span className="text-[11px] text-accent font-medium">{execution && !awaitingExecution ? 'Running' : 'Initializing'}</span>
+                    </div>
+                  </motion.div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-24 gap-3">
                     <Loader2 size={24} className="animate-spin text-accent/60" />

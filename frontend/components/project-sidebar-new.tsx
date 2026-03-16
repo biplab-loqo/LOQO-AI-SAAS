@@ -46,7 +46,7 @@ function NavItem({
         )}
       >
         <Icon size={18} className="flex-shrink-0" />
-        <span className="truncate">{label}</span>
+        <span>{label}</span>
       </motion.div>
     </Link>
   )
@@ -97,7 +97,7 @@ function ProjectItem({
         )}
       >
         <Film size={16} className="flex-shrink-0" />
-        <span className="truncate">{name}</span>
+        <span>{name}</span>
       </motion.div>
     </Link>
   )
@@ -124,42 +124,35 @@ function EpisodeHeader({
   const label = `Episode ${episodeNumber}`
   return (
     <Link href={href}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <motion.button
-            onClick={(e) => {
-              e.preventDefault()
-              onToggle()
-            }}
-            whileHover={{ x: 4 }}
-            whileTap={{ scale: 0.98 }}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium",
-              isActive
-                ? "bg-accent/15 text-accent shadow-sm shadow-accent/10"
-                : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
-            )}
-          >
-            <ChevronDown
-              size={16}
-              className={cn("flex-shrink-0 transition-transform duration-300", isExpanded ? "rotate-180" : "")}
-            />
-            <Play size={16} className="flex-shrink-0" />
-            <span className="truncate flex-1 text-left">{label}</span>
-            <span className={cn(
-              "text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0",
-              isActive
-                ? "bg-accent/10 text-accent"
-                : "bg-muted/60 text-foreground/60"
-            )}>
-              {partCount}
-            </span>
-          </motion.button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {label}
-        </TooltipContent>
-      </Tooltip>
+      <motion.button
+        onClick={(e) => {
+          e.preventDefault()
+          onToggle()
+        }}
+        whileHover={{ x: 4 }}
+        whileTap={{ scale: 0.98 }}
+        className={cn(
+          "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium",
+          isActive
+            ? "bg-accent/15 text-accent shadow-sm shadow-accent/10"
+            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+        )}
+      >
+        <ChevronDown
+          size={16}
+          className={cn("flex-shrink-0 transition-transform duration-300", isExpanded ? "rotate-180" : "")}
+        />
+        <Play size={16} className="flex-shrink-0" />
+        <span className="flex-1 text-left">{label}</span>
+        <span className={cn(
+          "text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0",
+          isActive
+            ? "bg-accent/10 text-accent"
+            : "bg-muted/60 text-foreground/60"
+        )}>
+          {partCount}
+        </span>
+      </motion.button>
     </Link>
   )
 }
@@ -184,40 +177,25 @@ function PartItem({
   
   return (
     <Link href={href}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <motion.div
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            whileHover={{ x: 3 }}
-            whileTap={{ scale: 0.98 }}
-            className={cn(
-              "w-4/5 ml-auto flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 overflow-hidden",
-              isActive
-                ? "bg-accent/20 text-accent font-semibold shadow-sm shadow-accent/10"
-                : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
-            )}
-          >
-            <div className="min-w-0 flex-1 flex flex-col">
-              <span className="font-semibold truncate">Part {partNumber}</span>
-              {shouldAnimate && isHovered ? (
-                <motion.span
-                  className="text-foreground/50 text-xs"
-                  animate={{ x: [-100, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                >
-                  {title}
-                </motion.span>
-              ) : (
-                <span className="text-foreground/50 text-xs truncate">{title}</span>
-              )}
-            </div>
-          </motion.div>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {fullLabel}
-        </TooltipContent>
-      </Tooltip>
+      <motion.div
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        whileHover={{ x: 3 }}
+        whileTap={{ scale: 0.98 }}
+        className={cn(
+          "w-4/5 ml-auto flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 overflow-hidden",
+          isActive
+            ? "bg-accent/20 text-accent font-semibold shadow-sm shadow-accent/10"
+            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+        )}
+      >
+        <div className="min-w-0 flex-1 flex flex-col">
+          <span className="font-semibold">Part {partNumber}</span>
+          <p>
+            <span className="text-foreground/50 text-xs">{title}</span>
+          </p>
+        </div>
+      </motion.div>
     </Link>
   )
 }
