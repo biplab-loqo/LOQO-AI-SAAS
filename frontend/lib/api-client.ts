@@ -145,6 +145,7 @@ export interface MessageOut {
   prompt: string | null
   data: any | null
   user_id: string | null
+  template_key: string | null
   created_at: string
 }
 
@@ -256,6 +257,53 @@ export interface ClipOut {
   executionMetadata?: Record<string, any> | null
   createdAt: string
   updatedAt: string
+}
+
+export interface CollectionMediaOut {
+  _id?: string | { $oid?: string }
+  camera_angle?: string
+  camera_node_id?: string
+  file_name?: string
+  display_name?: string
+  s3_uri?: string
+}
+
+export interface CharacterOut {
+  id: string
+  org_id?: string | null
+  project_id?: string | null
+  episode_id?: string | null
+  part_id?: string | null
+  execution_id?: string | null
+  character_description: Record<string, any>
+  anchor_images: CollectionMediaOut[]
+  view_pack_images: CollectionMediaOut[]
+  collage_image?: CollectionMediaOut | null
+  character_camera_library?: Record<string, any> | null
+  status?: string
+  is_approved?: boolean
+  version: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface LocationOut {
+  id: string
+  org_id?: string | null
+  project_id?: string | null
+  episode_id?: string | null
+  part_id?: string | null
+  execution_id?: string | null
+  location_description: Record<string, any>
+  anchor_images: CollectionMediaOut[]
+  view_pack_images: CollectionMediaOut[]
+  collage_image?: CollectionMediaOut | null
+  location_camera_library?: Record<string, any> | null
+  status?: string
+  is_approved?: boolean
+  version: number
+  created_at?: string
+  updated_at?: string
 }
 
 /**
@@ -862,6 +910,20 @@ export class ApiClient {
 
   async getWorkflowClips(executionId: string, params?: { part_id?: string; latest_only?: boolean }) {
     return this.get<ClipOut[]>(`/workflows/${executionId}/clips`, {
+      ...(params?.part_id ? { part_id: params.part_id } : {}),
+      ...(params?.latest_only != null ? { latest_only: String(params.latest_only) } : {}),
+    })
+  }
+
+  async getWorkflowCharacters(executionId: string, params?: { part_id?: string; latest_only?: boolean }) {
+    return this.get<CharacterOut[]>(`/workflows/${executionId}/characters`, {
+      ...(params?.part_id ? { part_id: params.part_id } : {}),
+      ...(params?.latest_only != null ? { latest_only: String(params.latest_only) } : {}),
+    })
+  }
+
+  async getWorkflowLocations(executionId: string, params?: { part_id?: string; latest_only?: boolean }) {
+    return this.get<LocationOut[]>(`/workflows/${executionId}/locations`, {
       ...(params?.part_id ? { part_id: params.part_id } : {}),
       ...(params?.latest_only != null ? { latest_only: String(params.latest_only) } : {}),
     })

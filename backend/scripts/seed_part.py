@@ -728,6 +728,162 @@ def _seed_clips(db, execution: dict) -> None:
     print(f"    ✓ Seeded {len(docs)} clips → clips collection")
 
 
+def _media_rows(urls: list[str], prefix: str) -> list[dict]:
+    rows: list[dict] = []
+    for i, u in enumerate(urls, start=1):
+        file_name = u.split("/")[-1]
+        rows.append({
+            "display_name": f"{prefix} {i}",
+            "file_name": file_name,
+            "s3_uri": u,
+        })
+    return rows
+
+
+def _seed_characters(db, execution: dict) -> int:
+    exec_id = str(execution["_id"])
+    org_id = execution.get("orgId") or ""
+    proj_id = execution.get("projectId") or ""
+    ep_id = execution.get("episodeId") or ""
+    part_id = execution.get("partId") or ""
+
+    deleted = db["characters"].delete_many({
+        "$or": [
+            {"execution_id": exec_id},
+            {"executionId": exec_id},
+        ]
+    })
+    if deleted.deleted_count:
+        print(f"    ✓ Removed {deleted.deleted_count} existing characters")
+
+    char_payload = (
+        DEMO_OUTPUTS.get("run_character_design", {})
+        .get("blobs", [{}])[0]
+        .get("data", {})
+        .get("Characters", {})
+    )
+    anchor_payload = DEMO_OUTPUTS.get("generate_anchor_image_for_character", {}).get("artifactRefs", {})
+    view_payload = DEMO_OUTPUTS.get("generate_view_pack_images_for_character", {}).get("artifactRefs", {})
+
+    docs: list[dict] = []
+    for idx, (name, desc) in enumerate(char_payload.items(), start=1):
+        anchors = anchor_payload.get(name, []) or []
+        view_pack = view_payload.get(name, []) or []
+        collage_url = next((u for u in view_pack if "collage" in u.lower()), None)
+
+        character_description = {
+            "character_id": f"char_{idx:02d}",
+            "name_identifier": name,
+            "display_name": name,
+            "character_name": name,
+            "cultural_context": desc.get("Cultural_Context"),
+            "visual_design_style": desc.get("Visual_Design_Style"),
+            "age_gender": desc.get("Age_Gender"),
+            "physical_description": desc.get("Physical_Description"),
+            "attire": desc.get("Attire"),
+            "signature_props": desc.get("Signature_Props", []),
+            "personality_visual_cues": desc.get("Personality_Visual_Cues"),
+        }
+
+        docs.append({
+            "_id": ObjectId(),
+            "org_id": org_id,
+            "project_id": proj_id,
+            "episode_id": ep_id,
+            "part_id": part_id,
+            "execution_id": exec_id,
+            "character_description": character_description,
+            "anchor_images": _media_rows(anchors, "Anchor"),
+            "view_pack_images": _media_rows(view_pack, "View Pack"),
+            "collage_image": {
+                "display_name": "Collage",
+                "file_name": collage_url.split("/")[-1],
+                "s3_uri": collage_url,
+            } if collage_url else None,
+            "character_camera_library": None,
+            "status": "succeeded",
+            "is_approved": False,
+            "version": 1,
+            "created_at": now,
+            "updated_at": now,
+        })
+
+    if docs:
+        db["characters"].insert_many(docs)
+    print(f"    ✓ Seeded {len(docs)} characters → characters collection")
+    return len(docs)
+
+
+def _seed_locations(db, execution: dict) -> int:
+    exec_id = str(execution["_id"])
+    org_id = execution.get("orgId") or ""
+    proj_id = execution.get("projectId") or ""
+    ep_id = execution.get("episodeId") or ""
+    part_id = execution.get("partId") or ""
+
+    deleted = db["locations"].delete_many({
+        "$or": [
+            {"execution_id": exec_id},
+            {"executionId": exec_id},
+        ]
+    })
+    if deleted.deleted_count:
+        print(f"    ✓ Removed {deleted.deleted_count} existing locations")
+
+    loc_payload = (
+        DEMO_OUTPUTS.get("run_key_location", {})
+        .get("blobs", [{}])[0]
+        .get("data", {})
+        .get("Key_Locations", {})
+    )
+    anchor_payload = DEMO_OUTPUTS.get("generate_anchor_image_for_key_location", {}).get("artifactRefs", {})
+    view_payload = DEMO_OUTPUTS.get("generate_view_pack_images_for_key_location", {}).get("artifactRefs", {})
+
+    docs: list[dict] = []
+    for idx, (key, desc) in enumerate(loc_payload.items(), start=1):
+        anchors = anchor_payload.get(key, []) or []
+        view_pack = view_payload.get(key, []) or []
+        collage_url = next((u for u in view_pack if "collage" in u.lower() or "freezepack" in u.lower()), None)
+
+        location_description = {
+            "location_id": desc.get("location_id") or f"loc_{idx:02d}",
+            "name": desc.get("name") or key,
+            "display_name": desc.get("name") or key,
+            "location_name": desc.get("name") or key,
+            "type": desc.get("type"),
+            "narrative_role": desc.get("narrative_role"),
+            "visual_profile": desc.get("visual_profile", {}),
+        }
+
+        docs.append({
+            "_id": ObjectId(),
+            "org_id": org_id,
+            "project_id": proj_id,
+            "episode_id": ep_id,
+            "part_id": part_id,
+            "execution_id": exec_id,
+            "location_description": location_description,
+            "anchor_images": _media_rows(anchors, "Anchor"),
+            "view_pack_images": _media_rows(view_pack, "View Pack"),
+            "collage_image": {
+                "display_name": "Collage",
+                "file_name": collage_url.split("/")[-1],
+                "s3_uri": collage_url,
+            } if collage_url else None,
+            "location_camera_library": None,
+            "status": "succeeded",
+            "is_approved": False,
+            "version": 1,
+            "created_at": now,
+            "updated_at": now,
+        })
+
+    if docs:
+        db["locations"].insert_many(docs)
+    print(f"    ✓ Seeded {len(docs)} locations → locations collection")
+    return len(docs)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  Main
 # ══════════════════════════════════════════════════════════════════════════════
@@ -881,6 +1037,14 @@ def main():
     print("▶  Seeding clips…")
     _seed_clips(db, execution)
 
+    print()
+    print("▶  Seeding characters…")
+    seeded_characters = _seed_characters(db, execution)
+
+    print()
+    print("▶  Seeding locations…")
+    seeded_locations = _seed_locations(db, execution)
+
     # ── Update WorkflowExecution: all steps succeeded, status completed ───
     print()
     print("▶  Updating execution status…")
@@ -903,6 +1067,8 @@ def main():
     print(f"      • {len(step_keys)} stepVersions (all succeeded)")
     print(f"      • {len(SHOT_DEFINITIONS)} shots")
     print(f"      • {len(SHOT_DEFINITIONS)} clips")
+    print(f"      • {seeded_characters} characters")
+    print(f"      • {seeded_locations} locations")
     print("═" * 58)
     print()
     print("  Refresh the browser — all tabs should be visible and populated.")

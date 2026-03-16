@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import {
   apiClient, ExecutionStatus, ExecutionStepSummary,
   StepData, StepHistoryEntry, extractStepData, stepDisplayName, PartOut,
-  type RichEntityAssets, type LabeledImage, type ShotOut, type ClipOut,
+  type RichEntityAssets, type LabeledImage, type ShotOut, type ClipOut, type CharacterOut, type LocationOut,
 } from '@/lib/api-client'
 import { STEP_DISPLAY_TEMPLATE, type TabTemplate } from '@/lib/step-display-template'
 import { Button } from '@/components/ui/button'
@@ -2467,53 +2467,82 @@ export default function PartStudioPage() {
     if (!template) { setTabLoading(false); return }
 
     if (template.layout === 'entity-page' && template.stepKeys.length > 1) {
-      // ── Merged tab: load all constituent steps in parallel ──
-      Promise.allSettled(
-        template.stepKeys.map(sk =>
-          apiClient.getStepData(executionId, sk).catch(() => null)
-        )
-      ).then(results => {
-        const combined: Record<string, any> = {}
+      const toLabeled = (imgs: Array<{ s3_uri?: string; display_name?: string; file_name?: string }>): LabeledImage[] => {
+        return (imgs ?? [])
+          .filter(i => !!i?.s3_uri)
+          .map(i => ({
+            url: i.s3_uri as string,
+            label: i.display_name || i.file_name || 'Image',
+          }))
+      }
 
-        // Step 0 — description / design step (primary)
-        const r0 = results[0]
-        if (r0?.status === 'fulfilled' && r0.value) {
-          const primary = r0.value
-          Object.assign(combined, extractStepData(primary))
-          if (primary.step_version_id) {
-            setSelectedVersionId(prev => ({ ...prev, [activeTab]: primary.step_version_id }))
+      const loadFromCollections = async () => {
+        const isCharactersTab = activeTab === 'characters'
+        const entityKey = template.entityKey || (isCharactersTab ? 'Characters' : 'Key_Locations')
+
+        const rows = isCharactersTab
+          ? await apiClient.getWorkflowCharacters(executionId, { part_id: partId, latest_only: true })
+          : await apiClient.getWorkflowLocations(executionId, { part_id: partId, latest_only: true })
+
+        const entities: Record<string, any>[] = []
+        const anchorRefs: Record<string, string[]> = {}
+        const viewPackRefs: Record<string, string[]> = {}
+        const richAnchorAssets: RichEntityAssets[] = []
+        const richViewPackAssets: RichEntityAssets[] = []
+
+        ;(rows as Array<CharacterOut | LocationOut>).forEach((row) => {
+          const desc = isCharactersTab
+            ? ((row as CharacterOut).character_description ?? {})
+            : ((row as LocationOut).location_description ?? {})
+
+          const displayName = String(
+            desc.display_name || desc.character_name || desc.location_name || desc.name || desc.name_id || 'Entity'
+          )
+
+          entities.push(desc)
+
+          const anchors = toLabeled((row as any).anchor_images ?? [])
+          if (anchors.length > 0) {
+            anchorRefs[displayName] = anchors.map(i => i.url)
+            richAnchorAssets.push({ entityName: displayName, images: anchors })
           }
+
+          const views = toLabeled((row as any).view_pack_images ?? [])
+          const collageRaw = (row as any).collage_image
+          const collage: LabeledImage[] = collageRaw?.s3_uri
+            ? [{
+                url: collageRaw.s3_uri,
+                label: collageRaw.display_name || collageRaw.file_name || 'Collage',
+              }]
+            : []
+
+          const mergedViews = [...views, ...collage]
+          if (mergedViews.length > 0) {
+            viewPackRefs[displayName] = mergedViews.map(i => i.url)
+            richViewPackAssets.push({ entityName: displayName, images: mergedViews })
+          }
+        })
+
+        const combined: Record<string, any> = {
+          [entityKey]: entities,
+          _layout: template.layout,
+          _entityKey: entityKey,
+          _anchorRefs: anchorRefs,
+          _viewPackRefs: viewPackRefs,
+          _richAnchorAssets: richAnchorAssets,
+          _richViewPackAssets: richViewPackAssets,
+          _anchorS3: Object.values(anchorRefs).flat(),
+          _viewPackS3: Object.values(viewPackRefs).flat(),
         }
 
-        // Step 1 — anchor image step
-        const r1 = results[1]
-        if (r1?.status === 'fulfilled' && r1?.value) {
-          const d = extractStepData(r1.value)
-          combined._anchorRefs = d._artifactRefs ?? {}
-          combined._anchorS3 = d._s3Uris ?? []
-          combined._richAnchorAssets = d._richAssets ?? []
-        }
-
-        // Step 2 — view pack image step
-        const r2 = results[2]
-        if (r2?.status === 'fulfilled' && r2?.value) {
-          const d = extractStepData(r2.value)
-          combined._viewPackRefs = d._artifactRefs ?? {}
-          combined._viewPackS3 = d._s3Uris ?? []
-          combined._richViewPackAssets = d._richAssets ?? []
-        }
-
-        combined._layout = template.layout
-        combined._entityKey = template.entityKey
-
-        const hasReal = Object.keys(combined).some(k => !k.startsWith('_'))
+        const hasReal = entities.length > 0 || combined._anchorS3.length > 0 || combined._viewPackS3.length > 0
         setTabData(prev => ({ ...prev, [activeTab]: hasReal ? combined : null }))
-      }).finally(() => setTabLoading(false))
+        setStepVersions(prev => ({ ...prev, [activeTab]: [] }))
+      }
 
-      // Load version history for primary step
-      apiClient.getStepHistory(executionId, template.stepKeys[0])
-        .then(history => setStepVersions(prev => ({ ...prev, [activeTab]: history })))
-        .catch(() => setStepVersions(prev => ({ ...prev, [activeTab]: [] })))
+      loadFromCollections()
+        .catch(() => setTabData(prev => ({ ...prev, [activeTab]: null })))
+        .finally(() => setTabLoading(false))
     } else if (template.layout === 'shots' && template.stepKeys.length > 1) {
       // ── Shots tab: read from independent shots collection ──
       apiClient.getWorkflowShots(executionId, { part_id: partId, latest_only: true })

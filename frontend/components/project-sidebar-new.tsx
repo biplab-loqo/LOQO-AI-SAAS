@@ -7,75 +7,200 @@ import {
   Users,
   Settings,
   Film,
-  Eye,
-  Clapperboard,
+  Play,
   Loader2,
   Home,
+  ChevronDown,
+  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 import { projectRefreshEvents } from '@/lib/refresh-events'
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 
-/* ────────────────────────────────────────────────────────────
-   SIDEBAR NAV ITEM
-   ──────────────────────────────────────────────────────────── */
-function NavItem({ href, icon: Icon, label, isActive, badge, color, activeIndicatorId = 'sidebar-active' }: {
-  href: string; icon: React.ElementType; label: string; isActive: boolean; badge?: number; color?: string; activeIndicatorId?: string
+/* ════════════════════════════════════════════════════════════════
+   NAVIGATION ITEM - Top-level nav (Dashboard, Team, Settings)
+   ════════════════════════════════════════════════════════════════ */
+function NavItem({
+  href,
+  icon: Icon,
+  label,
+  isActive,
+}: {
+  href: string
+  icon: React.ElementType
+  label: string
+  isActive: boolean
 }) {
   return (
     <Link href={href}>
       <motion.div
-        whileHover={{ x: 4, scale: 1.01 }}
+        whileHover={{ x: 4 }}
         whileTap={{ scale: 0.98 }}
         className={cn(
-          "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] transition-all duration-200 group relative border-l-2",
+          "group flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
           isActive
-            ? "bg-accent/10 text-accent font-semibold border-l-accent border border-accent/30 shadow-sm shadow-accent/10"
-            : "text-foreground/70 hover:text-foreground hover:bg-secondary/60 border-l-transparent border border-border/20"
+            ? "bg-accent/15 text-accent shadow-sm shadow-accent/10"
+            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
         )}
       >
-        {isActive && (
-          <motion.div
-            layoutId={activeIndicatorId}
-            className="absolute inset-0 rounded-xl bg-gradient-to-r from-accent/5 to-transparent pointer-events-none"
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          />
-        )}
-        <Icon size={16} className={cn("flex-shrink-0 transition-colors", isActive ? "text-accent" : color || "group-hover:text-foreground")} />
-        <span className="truncate flex-1">{label}</span>
-        {badge !== undefined && badge > 0 && (
-          <span className="text-[10px] font-bold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-            {badge}
-          </span>
-        )}
+        <Icon size={18} className="flex-shrink-0" />
+        <span className="truncate">{label}</span>
       </motion.div>
     </Link>
   )
 }
 
-/* ────────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════════════════════════
    SECTION HEADER
-   ──────────────────────────────────────────────────────────── */
+   ════════════════════════════════════════════════════════════════ */
 function SectionLabel({ label, count }: { label: string; count?: number }) {
   return (
-    <div className="flex items-center justify-between px-3 mb-2">
-      <p className="text-[11px] font-bold text-foreground/60 uppercase tracking-[0.15em]">
+    <div className="flex items-center justify-between px-4 pt-4 pb-2">
+      <span className="text-xs font-bold text-foreground/50 uppercase tracking-wider">
         {label}
-      </p>
+      </span>
       {count !== undefined && (
-        <span className="text-[10px] font-medium text-muted-foreground">{count}</span>
+        <span className="text-xs font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
+          {count}
+        </span>
       )}
     </div>
   )
 }
 
-/* ────────────────────────────────────────────────────────────
-   MAIN SIDEBAR
-   ──────────────────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════
+   PROJECT ITEM
+   ════════════════════════════════════════════════════════════════ */
+function ProjectItem({
+  id,
+  name,
+  isActive,
+  href,
+}: {
+  id: string
+  name: string
+  isActive: boolean
+  href: string
+}) {
+  return (
+    <Link href={href}>
+      <motion.div
+        whileHover={{ x: 4 }}
+        whileTap={{ scale: 0.98 }}
+        className={cn(
+          "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200",
+          isActive
+            ? "bg-accent/15 text-accent font-semibold shadow-sm shadow-accent/10"
+            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+        )}
+      >
+        <Film size={16} className="flex-shrink-0" />
+        <span className="truncate">{name}</span>
+      </motion.div>
+    </Link>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════
+   EPISODE HEADER (Collapsible)
+   ════════════════════════════════════════════════════════════════ */
+function EpisodeHeader({
+  episodeNumber,
+  partCount,
+  isExpanded,
+  isActive,
+  onToggle,
+  href,
+}: {
+  episodeNumber: number
+  partCount: number
+  isExpanded: boolean
+  isActive: boolean
+  onToggle: () => void
+  href: string
+}) {
+  return (
+    <Link href={href}>
+      <motion.button
+        onClick={(e) => {
+          e.preventDefault()
+          onToggle()
+        }}
+        whileHover={{ x: 4 }}
+        whileTap={{ scale: 0.98 }}
+        className={cn(
+          "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium",
+          isActive
+            ? "bg-accent/15 text-accent shadow-sm shadow-accent/10"
+            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+        )}
+      >
+        <ChevronDown
+          size={16}
+          className={cn("flex-shrink-0 transition-transform duration-300", isExpanded ? "rotate-180" : "")}
+        />
+        <Play size={16} className="flex-shrink-0" />
+        <span className="truncate flex-1 text-left">Episode {episodeNumber}</span>
+        <span className={cn(
+          "text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0",
+          isActive
+            ? "bg-accent/10 text-accent"
+            : "bg-muted/60 text-foreground/60"
+        )}>
+          {partCount}
+        </span>
+      </motion.button>
+    </Link>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PART ITEM (Child of Episode)
+   ════════════════════════════════════════════════════════════════ */
+function PartItem({
+  partNumber,
+  title,
+  isActive,
+  href,
+}: {
+  partNumber: number
+  title: string
+  isActive: boolean
+  href: string
+}) {
+  return (
+    <Link href={href}>
+      <motion.div
+        whileHover={{ x: 3 }}
+        whileTap={{ scale: 0.98 }}
+        className={cn(
+          "w-4/5 ml-auto flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm transition-all duration-200",
+          isActive
+            ? "bg-accent/20 text-accent font-semibold shadow-sm shadow-accent/10"
+            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <span className="font-semibold">Part {partNumber}</span>
+          <span className="text-foreground/50 ml-1 truncate">{title}</span>
+        </div>
+      </motion.div>
+    </Link>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════
+   TYPES & MAIN COMPONENT
+   ════════════════════════════════════════════════════════════════ */
 interface EpisodeItem {
   id: string
   episodeNumber: number
+  parts: Array<{
+    id: string
+    partNumber: number
+    title: string
+  }>
 }
 
 interface ProjectSidebarProps {
@@ -89,23 +214,39 @@ export default function ProjectSidebarNew({
 }: ProjectSidebarProps) {
   const pathname = usePathname()
   const resolvedProjectId = projectId ?? ""
-  const projectBase = `/project/${resolvedProjectId}`
 
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([])
   const [loadingProjects, setLoadingProjects] = useState(true)
   const [episodes, setEpisodes] = useState<EpisodeItem[]>([])
   const [loadingEpisodes, setLoadingEpisodes] = useState(true)
+  const [expandedEpisodes, setExpandedEpisodes] = useState<Record<string, boolean>>({})
 
-  const isActivePath = (href: string) => pathname === `${projectBase}${href}` || pathname.startsWith(`${projectBase}${href}/`)
+  const activeEpisodeId = (() => {
+    const m = pathname.match(/\/project\/[^/]+\/episode\/([^/]+)/)
+    return m?.[1] ?? null
+  })()
+
+  const activePartId = (() => {
+    const m = pathname.match(/\/project\/[^/]+\/episode\/[^/]+\/part\/([^/]+)/)
+    return m?.[1] ?? null
+  })()
 
   // Fetch projects
   useEffect(() => {
     let alive = true
-    apiClient.getProjects()
-      .then(data => { if (alive) setProjects(data.map((p: any) => ({ id: p.id, name: p.name }))) })
+    apiClient
+      .getProjects()
+      .then((data) => {
+        if (alive)
+          setProjects(data.map((p: any) => ({ id: p.id, name: p.name })))
+      })
       .catch(() => {})
-      .finally(() => { if (alive) setLoadingProjects(false) })
-    return () => { alive = false }
+      .finally(() => {
+        if (alive) setLoadingProjects(false)
+      })
+    return () => {
+      alive = false
+    }
   }, [])
 
   // Fetch episodes + parts for current project
@@ -115,8 +256,9 @@ export default function ProjectSidebarNew({
 
     const fetchData = () => {
       setLoadingEpisodes(true)
-      apiClient.getProjectFull(resolvedProjectId)
-        .then(data => {
+      apiClient
+        .getProjectFull(resolvedProjectId)
+        .then((data) => {
           if (!alive) return
           setEpisodes(
             (data.episodes || [])
@@ -124,61 +266,95 @@ export default function ProjectSidebarNew({
               .map((ep: any) => ({
                 id: ep.id,
                 episodeNumber: ep.episodeNumber,
+                parts: (ep.parts || [])
+                  .slice()
+                  .sort((a: any, b: any) => (a.partNumber ?? 0) - (b.partNumber ?? 0))
+                  .map((part: any) => ({
+                    id: part.id,
+                    partNumber: part.partNumber,
+                    title: part.title || `Part ${part.partNumber}`,
+                  })),
               }))
           )
+
+          if (activeEpisodeId) {
+            setExpandedEpisodes((prev) => ({ ...prev, [activeEpisodeId]: true }))
+          }
         })
         .catch(() => {})
-        .finally(() => { if (alive) setLoadingEpisodes(false) })
+        .finally(() => {
+          if (alive) setLoadingEpisodes(false)
+        })
     }
 
     fetchData()
 
-    // Subscribe to refresh events
     const unsubscribe = projectRefreshEvents.subscribe(fetchData)
 
     return () => {
       alive = false
       unsubscribe()
     }
-  }, [resolvedProjectId])
+  }, [resolvedProjectId, activeEpisodeId])
+
+  const toggleEpisode = (episodeId: string) => {
+    setExpandedEpisodes((prev) => ({ ...prev, [episodeId]: !prev[episodeId] }))
+  }
 
   return (
     <motion.div
-      initial={{ x: -20, opacity: 0 }}
+      initial={{ x: -32, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="bg-[hsl(240_8%_6%)] border-r border-border/10 flex flex-col h-full overflow-hidden w-72 relative pt-12"
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="h-full w-72 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-hidden pt-12 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80"
     >
-      {/* ═══ Dashboard (always top) ═══ */}
-      <div className="pt-3 px-3 pb-4 flex-shrink-0">
-        <NavItem href="/dashboard" icon={Home} label="Dashboard" isActive={pathname === "/dashboard"} />
+      {/* ═══════════════════════════════════════════════════════════
+          TOP NAVIGATION
+          ═══════════════════════════════════════════════════════════ */}
+      <div className="px-3 py-3 flex-shrink-0 space-y-1 border-b border-border/30">
+        <NavItem
+          href="/dashboard"
+          icon={Home}
+          label="Dashboard"
+          isActive={pathname === "/dashboard"}
+        />
       </div>
 
-      {/* ═══ Projects ═══ */}
-      <div className="px-3 pb-2 flex-shrink-0">
+      {/* ═══════════════════════════════════════════════════════════
+          PROJECTS SECTION
+          ═══════════════════════════════════════════════════════════ */}
+      <div className="flex-shrink-0 border-b border-border/30">
         <SectionLabel label="Projects" count={projects.length} />
-        <div className="space-y-0.5">
+        <div className="px-2 pb-3 space-y-1">
           {loadingProjects ? (
-            <div className="space-y-1.5 px-3">
-              {[0, 1, 2].map(i => (
-                <div key={i} className="h-9 rounded-xl bg-muted/20 animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
+            <div className="space-y-2 px-2">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="h-10 rounded-lg bg-muted/30 animate-pulse"
+                />
               ))}
             </div>
           ) : projects.length === 0 ? (
-            <div className="px-3 py-3 text-xs text-muted-foreground/60 text-center">No projects</div>
+            <div className="px-4 py-4 text-xs text-center text-foreground/40">
+              No projects yet
+            </div>
           ) : (
             projects.map((project, i) => (
-              <motion.div key={project.id}
+              <motion.div
+                key={project.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <NavItem
-                  href={`/project/${project.id}`}
-                  icon={Film}
-                  label={project.name}
+                <ProjectItem
+                  id={project.id}
+                  name={project.name}
                   isActive={project.id === resolvedProjectId}
-                  activeIndicatorId="sidebar-active-project"
+                  href={`/project/${project.id}`}
                 />
               </motion.div>
             ))
@@ -186,52 +362,138 @@ export default function ProjectSidebarNew({
         </div>
       </div>
 
-      {/* ═══ Scrollable: Episodes ═══ */}
-      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30 hover:[&::-webkit-scrollbar-thumb]:bg-border/50">
-        <div className="p-3">
-          <div className="flex items-center justify-between px-3 mb-2">
-            <p className="text-[11px] font-bold text-foreground/60 uppercase tracking-[0.15em]">Episodes</p>
-            {loadingEpisodes && <Loader2 size={10} className="animate-spin text-muted-foreground" />}
-          </div>
-          {loadingEpisodes ? (
-            <div className="space-y-1.5 px-3">
-              {[0, 1].map(i => (
-                <div key={i} className="h-9 rounded-xl bg-muted/20 animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
-              ))}
-            </div>
-          ) : episodes.length === 0 ? (
-            <div className="px-3 py-3 text-xs text-muted-foreground/60 text-center">No episodes yet</div>
-          ) : (
-            <div className="space-y-0.5">
-              {episodes.map((ep, i) => {
+      {/* ═══════════════════════════════════════════════════════════
+          EPISODES SECTION (Scrollable)
+          ═══════════════════════════════════════════════════════════ */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <span className="text-xs font-bold text-foreground/50 uppercase tracking-wider">
+            Episodes
+          </span>
+          {loadingEpisodes && (
+            <Loader2 size={14} className="animate-spin text-accent" />
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30 hover:[&::-webkit-scrollbar-thumb]:bg-border/50">
+          <div className="px-2 pb-4 space-y-1">
+            {loadingEpisodes ? (
+              <div className="space-y-3 px-2">
+                {[0, 1].map((i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="space-y-2"
+                  >
+                    <div className="h-10 rounded-lg bg-muted/30 animate-pulse" />
+                    <div className="ml-8 h-8 rounded-lg bg-muted/30 animate-pulse" />
+                  </motion.div>
+                ))}
+              </div>
+            ) : episodes.length === 0 ? (
+              <div className="px-4 py-12 text-center">
+                <p className="text-xs text-foreground/40">No episodes yet</p>
+              </div>
+            ) : (
+              episodes.map((ep, i) => {
                 const epHref = `/project/${resolvedProjectId}/episode/${ep.id}`
-                const isEpActive = pathname === epHref || pathname.startsWith(epHref + "/")
+                const isEpActive = activeEpisodeId === ep.id
+                const isExpanded = expandedEpisodes[ep.id] ?? isEpActive
+
                 return (
                   <motion.div
                     key={ep.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.04 }}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="space-y-2"
                   >
-                    <NavItem
-                      href={epHref}
-                      icon={Clapperboard}
-                      label={`Episode ${ep.episodeNumber}`}
+                    <EpisodeHeader
+                      episodeNumber={ep.episodeNumber}
+                      partCount={ep.parts.length}
+                      isExpanded={isExpanded}
                       isActive={isEpActive}
-                      activeIndicatorId="sidebar-active-episode"
+                      onToggle={() => toggleEpisode(ep.id)}
+                      href={epHref}
                     />
+
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{
+                            duration: 0.25,
+                            ease: [0.32, 0.72, 0, 1],
+                          }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-1.5 pr-2">
+                            {ep.parts.length === 0 ? (
+                              <div className="w-4/5 ml-auto px-4 py-3 text-xs text-foreground/40 text-center bg-muted/20 rounded-md border border-border/20">
+                                No acts yet
+                              </div>
+                            ) : (
+                              ep.parts.map((part, j) => {
+                                const partHref = `${epHref}/part/${part.id}`
+                                const isPartActive = activePartId === part.id
+
+                                return (
+                                  <motion.div
+                                    key={part.id}
+                                    initial={{
+                                      opacity: 0,
+                                      x: 8,
+                                    }}
+                                    animate={{
+                                      opacity: 1,
+                                      x: 0,
+                                    }}
+                                    transition={{
+                                      delay: j * 0.04,
+                                    }}
+                                  >
+                                    <PartItem
+                                      partNumber={part.partNumber}
+                                      title={part.title}
+                                      isActive={isPartActive}
+                                      href={partHref}
+                                    />
+                                  </motion.div>
+                                )
+                              })
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 )
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ═══ Footer Links ═══ */}
-      <div className="px-3 pb-3 flex-shrink-0 space-y-0.5">
-        <NavItem href="/team" icon={Users} label="Team" isActive={pathname === "/team"} />
-        <NavItem href="/settings" icon={Settings} label="Settings" isActive={pathname === "/settings"} />
+      {/* ═══════════════════════════════════════════════════════════
+          FOOTER NAVIGATION
+          ═══════════════════════════════════════════════════════════ */}
+      <div className="px-3 py-3 flex-shrink-0 space-y-1 border-t border-border/30">
+        <NavItem
+          href="/team"
+          icon={Users}
+          label="Team"
+          isActive={pathname === "/team"}
+        />
+        <NavItem
+          href="/settings"
+          icon={Settings}
+          label="Settings"
+          isActive={pathname === "/settings"}
+        />
       </div>
     </motion.div>
   )

@@ -16,6 +16,8 @@ from app.models.step_config import StepConfig
 from app.models.message import Message
 from app.models.shot import Shot
 from app.models.clip import Clip
+from app.models.character import Character
+from app.models.location import Location
 
 ALL_MODELS = [
     User,
@@ -30,6 +32,8 @@ ALL_MODELS = [
     Message,
     Shot,
     Clip,
+    Character,
+    Location,
 ]
 
 __all__ = [
@@ -45,5 +49,7 @@ __all__ = [
     "Message",
     "Shot",
     "Clip",
+    "Character",
+    "Location",
     "ALL_MODELS",
 ]

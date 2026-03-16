@@ -35,6 +35,7 @@ Step Versions
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from copy import deepcopy
+from bson import ObjectId
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
@@ -48,7 +49,9 @@ from app.models.message import Message
 from beanie import PydanticObjectId
 from app.models.shot import Shot
 from app.models.clip import Clip
-from app.services.workflow_engine import WorkflowEngine, _convert_s3_uris_in_output
+from app.models.character import Character
+from app.models.location import Location
+from app.services.workflow_engine import WorkflowEngine, _convert_s3_uris_in_output, _s3uri_to_url
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
@@ -615,6 +618,375 @@ async def get_clips(
         d["executionId"] = str(row.execution_id) if row.execution_id else None
         out.append(d)
     return out
+
+
+# ══════════════════════════════════════════════════════════════
+#  CHARACTERS / LOCATIONS — independent collections
+# ══════════════════════════════════════════════════════════════
+
+def _normalize_media_refs(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert nested `s3_uri` values to browser-safe URLs in-place copy."""
+    out = deepcopy(doc)
+
+    def _fix_media_list(items: Any):
+        if not isinstance(items, list):
+            return
+        for m in items:
+            if isinstance(m, dict) and m.get("s3_uri"):
+                m["s3_uri"] = _s3uri_to_url(m["s3_uri"])
+
+    _fix_media_list(out.get("anchor_images"))
+    _fix_media_list(out.get("view_pack_images"))
+    if isinstance(out.get("collage_image"), dict) and out["collage_image"].get("s3_uri"):
+        out["collage_image"]["s3_uri"] = _s3uri_to_url(out["collage_image"]["s3_uri"])
+
+    return out
+
+
+def _to_jsonable(value: Any) -> Any:
+    """Recursively convert BSON/Python values into JSON-safe values."""
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, list):
+        return [_to_jsonable(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _to_jsonable(v) for k, v in value.items()}
+    return value
+
+
+def _character_identity_key(row: Character) -> str:
+    d = row.character_description or {}
+    return str(
+        d.get("character_id")
+        or d.get("name_identifier")
+        or d.get("name_id")
+        or d.get("display_name")
+        or d.get("character_name")
+        or row.id
+    )
+
+
+def _location_identity_key(row: Location) -> str:
+    d = row.location_description or {}
+    return str(
+        d.get("location_id")
+        or d.get("name")
+        or d.get("location_name")
+        or d.get("display_name")
+        or row.id
+    )
+
+
+@router.get("/{execution_id}/characters")
+async def get_characters(
+    execution_id: str,
+    part_id: Optional[str] = None,
+    latest_only: bool = Query(True),
+    user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Get character rows for an execution from the `characters` collection."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+    ctx_str = str(ctx_id)
+
+    query_or: List[Dict[str, Any]] = [{"execution_id": ctx_str}, {"executionId": ctx_str}]
+    if part_id:
+        query_or = [
+            {"execution_id": ctx_str, "part_id": part_id},
+            {"executionId": ctx_str, "partId": part_id},
+            {"execution_id": ctx_str, "partId": part_id},
+            {"executionId": ctx_str, "part_id": part_id},
+        ]
+
+    rows = await Character.find({"$or": query_or}).sort([("version", -1), ("updated_at", -1)]).to_list()
+
+    if latest_only:
+        latest_by_entity: Dict[str, Character] = {}
+        for row in rows:
+            key = _character_identity_key(row)
+            if key not in latest_by_entity:
+                latest_by_entity[key] = row
+        rows = list(latest_by_entity.values())
+
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        d = _to_jsonable(row.model_dump(mode="python"))
+        d["id"] = str(row.id)
+        d = _normalize_media_refs(d)
+        out.append(d)
+    return out
+
+
+@router.get("/{execution_id}/locations")
+async def get_locations(
+    execution_id: str,
+    part_id: Optional[str] = None,
+    latest_only: bool = Query(True),
+    user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Get location rows for an execution from the `locations` collection."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+    ctx_str = str(ctx_id)
+
+    query_or: List[Dict[str, Any]] = [{"execution_id": ctx_str}, {"executionId": ctx_str}]
+    if part_id:
+        query_or = [
+            {"execution_id": ctx_str, "part_id": part_id},
+            {"executionId": ctx_str, "partId": part_id},
+            {"execution_id": ctx_str, "partId": part_id},
+            {"executionId": ctx_str, "part_id": part_id},
+        ]
+
+    rows = await Location.find({"$or": query_or}).sort([("version", -1), ("updated_at", -1)]).to_list()
+
+    if latest_only:
+        latest_by_entity: Dict[str, Location] = {}
+        for row in rows:
+            key = _location_identity_key(row)
+            if key not in latest_by_entity:
+                latest_by_entity[key] = row
+        rows = list(latest_by_entity.values())
+
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        d = _to_jsonable(row.model_dump(mode="python"))
+        d["id"] = str(row.id)
+        d = _normalize_media_refs(d)
+        out.append(d)
+    return out
+
+
+class UpdateCharacterBody(BaseModel):
+    character_description: Optional[Dict[str, Any]] = None
+    anchor_images: Optional[List[Dict[str, Any]]] = None
+    view_pack_images: Optional[List[Dict[str, Any]]] = None
+    collage_image: Optional[Dict[str, Any]] = None
+    character_camera_library: Optional[Dict[str, Any]] = None
+    status: Optional[str] = None
+    is_approved: Optional[bool] = None
+
+
+@router.patch("/{execution_id}/characters/{character_doc_id}")
+async def update_character(
+    execution_id: str,
+    character_doc_id: str,
+    body: UpdateCharacterBody,
+    user: User = Depends(get_current_user),
+):
+    """Edit a character row -> inserts a new Character version document."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+
+    try:
+        doc_oid = PydanticObjectId(character_doc_id)
+    except Exception:
+        raise HTTPException(400, "Invalid character_doc_id — must be a valid ObjectId")
+
+    latest = await Character.get(doc_oid)
+    if not latest:
+        raise HTTPException(404, f"Character '{character_doc_id}' not found")
+
+    latest_exec_id = str(getattr(latest, "execution_id", "") or "")
+    if latest_exec_id and latest_exec_id != str(ctx_id):
+        raise HTTPException(404, f"Character '{character_doc_id}' not found in this execution")
+
+    new_doc = deepcopy(latest)
+    new_doc.id = None
+    new_doc.version = int(latest.version or 1) + 1
+    new_doc.updated_at = datetime.now(timezone.utc)
+
+    if body.character_description is not None:
+        new_doc.character_description = body.character_description
+    if body.anchor_images is not None:
+        new_doc.anchor_images = body.anchor_images
+    if body.view_pack_images is not None:
+        new_doc.view_pack_images = body.view_pack_images
+    if body.collage_image is not None:
+        new_doc.collage_image = body.collage_image
+    if body.character_camera_library is not None:
+        new_doc.character_camera_library = body.character_camera_library
+    if body.status is not None:
+        new_doc.status = body.status
+    if body.is_approved is not None:
+        new_doc.is_approved = body.is_approved
+
+    await new_doc.insert()
+
+    d = _normalize_media_refs(_to_jsonable(new_doc.model_dump(mode="python")))
+    d["id"] = str(new_doc.id)
+    return d
+
+
+@router.get("/{execution_id}/characters/{character_key}/versions")
+async def get_character_versions(
+    execution_id: str,
+    character_key: str,
+    user: User = Depends(get_current_user),
+):
+    """Return all versions of a character identity, oldest first."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+    rows = await Character.find({"$or": [{"execution_id": str(ctx_id)}, {"executionId": str(ctx_id)}]}).sort([("version", 1)]).to_list()
+
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        if _character_identity_key(row) != character_key:
+            continue
+        d = _normalize_media_refs(_to_jsonable(row.model_dump(mode="python")))
+        d["id"] = str(row.id)
+        out.append(d)
+    return out
+
+
+@router.post("/{execution_id}/characters/{character_doc_id}/approve")
+async def approve_character_version(
+    execution_id: str,
+    character_doc_id: str,
+    user: User = Depends(get_current_user),
+):
+    """Mark a specific Character version as approved; un-approve sibling versions."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+
+    try:
+        doc_oid = PydanticObjectId(character_doc_id)
+    except Exception:
+        raise HTTPException(400, "Invalid character_doc_id — must be a valid ObjectId")
+
+    target = await Character.get(doc_oid)
+    if not target:
+        raise HTTPException(404, f"Character version '{character_doc_id}' not found")
+    target_exec_id = str(getattr(target, "execution_id", "") or "")
+    if target_exec_id and target_exec_id != str(ctx_id):
+        raise HTTPException(404, f"Character version '{character_doc_id}' not found in this execution")
+
+    key = _character_identity_key(target)
+    now = datetime.now(timezone.utc)
+
+    rows = await Character.find({"$or": [{"execution_id": str(ctx_id)}, {"executionId": str(ctx_id)}]}).to_list()
+    sibling_ids = [r.id for r in rows if _character_identity_key(r) == key]
+    if sibling_ids:
+        await Character.find({"_id": {"$in": sibling_ids}}).update({"$set": {"is_approved": False, "updated_at": now}})
+
+    await Character.find_one({"_id": doc_oid}).update({"$set": {"is_approved": True, "updated_at": now}})
+    await target.sync()
+    d = _normalize_media_refs(_to_jsonable(target.model_dump(mode="python")))
+    d["id"] = str(target.id)
+    return d
+
+
+class UpdateLocationBody(BaseModel):
+    location_description: Optional[Dict[str, Any]] = None
+    anchor_images: Optional[List[Dict[str, Any]]] = None
+    view_pack_images: Optional[List[Dict[str, Any]]] = None
+    collage_image: Optional[Dict[str, Any]] = None
+    location_camera_library: Optional[Dict[str, Any]] = None
+    status: Optional[str] = None
+    is_approved: Optional[bool] = None
+
+
+@router.patch("/{execution_id}/locations/{location_doc_id}")
+async def update_location(
+    execution_id: str,
+    location_doc_id: str,
+    body: UpdateLocationBody,
+    user: User = Depends(get_current_user),
+):
+    """Edit a location row -> inserts a new Location version document."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+
+    try:
+        doc_oid = PydanticObjectId(location_doc_id)
+    except Exception:
+        raise HTTPException(400, "Invalid location_doc_id — must be a valid ObjectId")
+
+    latest = await Location.get(doc_oid)
+    if not latest:
+        raise HTTPException(404, f"Location '{location_doc_id}' not found")
+
+    latest_exec_id = str(getattr(latest, "execution_id", "") or "")
+    if latest_exec_id and latest_exec_id != str(ctx_id):
+        raise HTTPException(404, f"Location '{location_doc_id}' not found in this execution")
+
+    new_doc = deepcopy(latest)
+    new_doc.id = None
+    new_doc.version = int(latest.version or 1) + 1
+    new_doc.updated_at = datetime.now(timezone.utc)
+
+    if body.location_description is not None:
+        new_doc.location_description = body.location_description
+    if body.anchor_images is not None:
+        new_doc.anchor_images = body.anchor_images
+    if body.view_pack_images is not None:
+        new_doc.view_pack_images = body.view_pack_images
+    if body.collage_image is not None:
+        new_doc.collage_image = body.collage_image
+    if body.location_camera_library is not None:
+        new_doc.location_camera_library = body.location_camera_library
+    if body.status is not None:
+        new_doc.status = body.status
+    if body.is_approved is not None:
+        new_doc.is_approved = body.is_approved
+
+    await new_doc.insert()
+
+    d = _normalize_media_refs(_to_jsonable(new_doc.model_dump(mode="python")))
+    d["id"] = str(new_doc.id)
+    return d
+
+
+@router.get("/{execution_id}/locations/{location_key}/versions")
+async def get_location_versions(
+    execution_id: str,
+    location_key: str,
+    user: User = Depends(get_current_user),
+):
+    """Return all versions of a location identity, oldest first."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+    rows = await Location.find({"$or": [{"execution_id": str(ctx_id)}, {"executionId": str(ctx_id)}]}).sort([("version", 1)]).to_list()
+
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        if _location_identity_key(row) != location_key:
+            continue
+        d = _normalize_media_refs(_to_jsonable(row.model_dump(mode="python")))
+        d["id"] = str(row.id)
+        out.append(d)
+    return out
+
+
+@router.post("/{execution_id}/locations/{location_doc_id}/approve")
+async def approve_location_version(
+    execution_id: str,
+    location_doc_id: str,
+    user: User = Depends(get_current_user),
+):
+    """Mark a specific Location version as approved; un-approve sibling versions."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+
+    try:
+        doc_oid = PydanticObjectId(location_doc_id)
+    except Exception:
+        raise HTTPException(400, "Invalid location_doc_id — must be a valid ObjectId")
+
+    target = await Location.get(doc_oid)
+    if not target:
+        raise HTTPException(404, f"Location version '{location_doc_id}' not found")
+    target_exec_id = str(getattr(target, "execution_id", "") or "")
+    if target_exec_id and target_exec_id != str(ctx_id):
+        raise HTTPException(404, f"Location version '{location_doc_id}' not found in this execution")
+
+    key = _location_identity_key(target)
+    now = datetime.now(timezone.utc)
+
+    rows = await Location.find({"$or": [{"execution_id": str(ctx_id)}, {"executionId": str(ctx_id)}]}).to_list()
+    sibling_ids = [r.id for r in rows if _location_identity_key(r) == key]
+    if sibling_ids:
+        await Location.find({"_id": {"$in": sibling_ids}}).update({"$set": {"is_approved": False, "updated_at": now}})
+
+    await Location.find_one({"_id": doc_oid}).update({"$set": {"is_approved": True, "updated_at": now}})
+    await target.sync()
+    d = _normalize_media_refs(_to_jsonable(target.model_dump(mode="python")))
+    d["id"] = str(target.id)
+    return d
 
 
 # ══════════════════════════════════════════════════════════════
