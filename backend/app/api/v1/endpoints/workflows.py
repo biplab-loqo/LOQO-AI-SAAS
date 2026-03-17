@@ -53,6 +53,7 @@ from app.models.clip import Clip
 from app.models.character import Character
 from app.models.location import Location
 from app.services.workflow_engine import WorkflowEngine, _convert_s3_uris_in_output, _s3uri_to_url
+from app.services.sqs_service import send_to_sqs, build_message_body
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
@@ -120,6 +121,23 @@ class CreateMessageBody(BaseModel):
     step_key: Optional[list[str]] = None
     action: str = "generate"     # "generate" | "edit" | "iterate"
     prompt: Optional[str] = None
+    org_id: Optional[str] = None
+    project_id: Optional[str] = None
+    episode_id: Optional[str] = None
+    part_id: Optional[str] = None
+
+
+class ShotIterateBody(BaseModel):
+    """Iterate a specific shot with a text instruction."""
+    instruction: str
+    org_id: Optional[str] = None
+    project_id: Optional[str] = None
+    episode_id: Optional[str] = None
+    part_id: Optional[str] = None
+
+
+class ShotRetryBody(BaseModel):
+    """Retry a specific shot — re-generate with existing references."""
     org_id: Optional[str] = None
     project_id: Optional[str] = None
     episode_id: Optional[str] = None
@@ -902,13 +920,20 @@ async def _all_latest_locations_approved(ctx_id: str) -> bool:
 
 
 async def _all_latest_shots_approved(ctx_id: str) -> bool:
-    rows = await Shot.find({"executionId": PydanticObjectId(ctx_id)}).sort([("version", -1)]).to_list()
-    latest: Dict[str, Shot] = {}
+    """Returns True when every shotId group has at least one approved version."""
+    rows = await Shot.find({"executionId": PydanticObjectId(ctx_id)}).to_list()
+    if not rows:
+        return False
+    groups: Dict[str, bool] = {}
     for row in rows:
         key = str(getattr(row, "shot_id", "") or "")
-        if key and key not in latest:
-            latest[key] = row
-    return bool(latest) and all(bool(getattr(r, "is_approved", False)) for r in latest.values())
+        if not key:
+            continue
+        if key not in groups:
+            groups[key] = False
+        if bool(getattr(row, "is_approved", False)):
+            groups[key] = True
+    return bool(groups) and all(groups.values())
 
 
 async def _all_latest_clips_approved(ctx_id: str) -> bool:
@@ -1453,12 +1478,7 @@ async def approve_shot_version(
 
     now = datetime.now(timezone.utc)
 
-    # Un-approve ALL versions of this shotId in this execution
-    await Shot.find(
-        {"executionId": ctx_id, "shotId": target.shot_id}
-    ).update({"$set": {"isApproved": False, "updatedAt": now}})
-
-    # Approve the specific version
+    # Approve the specific version (multiple versions per shotId may be approved)
     await Shot.find_one({"_id": doc_oid}).update(
         {"$set": {"isApproved": True, "updatedAt": now}}
     )
@@ -1485,6 +1505,36 @@ async def approve_shot_version(
         except Exception:
             d["workflow_advanced"] = False
 
+    return d
+
+
+@router.post("/{execution_id}/shots/{shot_doc_id}/unapprove")
+async def unapprove_shot_version(
+    execution_id: str,
+    shot_doc_id: str,
+    user: User = Depends(get_current_user),
+):
+    """Remove approval from a specific Shot version. Returns the updated document."""
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+
+    try:
+        doc_oid = PydanticObjectId(shot_doc_id)
+    except Exception:
+        raise HTTPException(400, "Invalid shot_doc_id — must be a valid ObjectId")
+
+    target = await Shot.get(doc_oid)
+    if not target or str(target.execution_id) != str(ctx_id):
+        raise HTTPException(404, f"Shot version '{shot_doc_id}' not found in this execution")
+
+    now = datetime.now(timezone.utc)
+    await Shot.find_one({"_id": doc_oid}).update(
+        {"$set": {"isApproved": False, "updatedAt": now}}
+    )
+
+    await target.sync()
+    d = target.model_dump(by_alias=True, mode="json")
+    d["id"] = str(target.id)
+    d["executionId"] = str(target.execution_id) if target.execution_id else None
     return d
 
 
@@ -1543,4 +1593,242 @@ async def approve_clip_version(
             d["workflow_advanced"] = False
 
     return d
+
+
+# ══════════════════════════════════════════════════════════════
+#  SHOTS — iterate (refine with instruction) & retry (re-generate)
+# ══════════════════════════════════════════════════════════════
+
+@router.post("/{execution_id}/shots/{shot_doc_id}/iterate")
+async def iterate_shot(
+    execution_id: str,
+    shot_doc_id: str,
+    body: ShotIterateBody,
+    user: User = Depends(get_current_user),
+):
+    """Iterate a specific shot with a text instruction.
+
+    Builds an SQS message with action='iterate' and an iterate_payload
+    containing the shot metadata and instruction.
+    Also saves a Message record for auditability.
+    """
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+
+    try:
+        doc_oid = PydanticObjectId(shot_doc_id)
+    except Exception:
+        raise HTTPException(400, "Invalid shot_doc_id")
+
+    shot = await Shot.get(doc_oid)
+    if not shot or str(shot.execution_id) != str(ctx_id):
+        raise HTTPException(404, f"Shot '{shot_doc_id}' not found in this execution")
+
+    step_key = ["generate_images_nano_banana"]
+    org_id = body.org_id or str(getattr(shot, "org_id", "") or "")
+    project_id = body.project_id or str(getattr(shot, "project_id", "") or "")
+    episode_id = body.episode_id or str(getattr(shot, "episode_id", "") or "")
+    part_id = body.part_id or str(getattr(shot, "part_id", "") or "")
+
+    iterate_payload = {
+        "shot_number": shot.shot_metadata.shot_number if shot.shot_metadata else shot.sequence_no,
+        "base_shot_id": str(shot.id),
+        "instruction": body.instruction,
+    }
+    if shot.start_image:
+        iterate_payload["start_image"] = {
+            "object_id": shot.start_image.object_id or f"start_image_{shot.sequence_no}_{ctx_id}",
+            "display_name": shot.start_image.display_name,
+            "aws_url": shot.start_image.aws_url,
+        }
+
+    # Build SQS message body with iterate_payload
+    import uuid
+    sqs_body = {
+        "executionId": str(ctx_id),
+        "msg_id": str(uuid.uuid4()),
+        "stepKey": step_key,
+        "orgId": org_id,
+        "projectId": project_id,
+        "episodeId": episode_id,
+        "partId": part_id,
+        "action": "iterate",
+        "userId": str(user.id),
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "iterate_payload": iterate_payload,
+    }
+
+    # Save Message record
+    msg = Message(
+        execution_id=str(ctx_id),
+        step_key=step_key,
+        org_id=org_id,
+        project_id=project_id,
+        episode_id=episode_id,
+        part_id=part_id,
+        action="iterate",
+        prompt=body.instruction,
+        user_id=str(user.id),
+    )
+    await msg.insert()
+
+    # Send to SQS directly with custom body
+    import json as _json
+    import asyncio
+    from app.services.sqs_service import _sync_send
+    from app.core.config import settings as _settings
+    import hashlib
+
+    queue_url = _settings.AWS_SQS_QUEUE_URL
+    sqs_msg_id = None
+    if queue_url:
+        body_str = _json.dumps(sqs_body, default=str)
+        is_fifo = queue_url.endswith(".fifo")
+        group_id = f"{ctx_id}:generate_images_nano_banana"
+        dedup_id = hashlib.sha256(
+            f"generate_images_nano_banana:iterate:{datetime.now(timezone.utc).isoformat()}".encode()
+        ).hexdigest()
+        try:
+            sqs_msg_id = await asyncio.to_thread(
+                _sync_send, queue_url, body_str, group_id, dedup_id, is_fifo
+            )
+        except Exception:
+            pass
+
+    return {
+        "status": "sent",
+        "message_id": str(msg.id),
+        "sqs_message_id": sqs_msg_id,
+        "shot_id": str(shot.id),
+        "action": "iterate",
+    }
+
+
+@router.post("/{execution_id}/shots/{shot_doc_id}/retry")
+async def retry_shot(
+    execution_id: str,
+    shot_doc_id: str,
+    body: ShotRetryBody,
+    user: User = Depends(get_current_user),
+):
+    """Retry a specific shot — re-generate with existing references.
+
+    Builds an SQS message with action='retry' and a retry_payload
+    containing the shot's character/location/previous references.
+    Also saves a Message record for auditability.
+    """
+    _, ctx_id = await _resolve_ctx_id(execution_id)
+
+    try:
+        doc_oid = PydanticObjectId(shot_doc_id)
+    except Exception:
+        raise HTTPException(400, "Invalid shot_doc_id")
+
+    shot = await Shot.get(doc_oid)
+    if not shot or str(shot.execution_id) != str(ctx_id):
+        raise HTTPException(404, f"Shot '{shot_doc_id}' not found in this execution")
+
+    step_key = ["generate_images_nano_banana"]
+    org_id = body.org_id or str(getattr(shot, "org_id", "") or "")
+    project_id = body.project_id or str(getattr(shot, "project_id", "") or "")
+    episode_id = body.episode_id or str(getattr(shot, "episode_id", "") or "")
+    part_id = body.part_id or str(getattr(shot, "part_id", "") or "")
+
+    retry_payload: Dict[str, Any] = {
+        "shot_number": shot.shot_metadata.shot_number if shot.shot_metadata else shot.sequence_no,
+        "base_shot_id": str(shot.id),
+        "start_image_prompt": shot.start_image_prompt,
+    }
+
+    # character_references
+    char_refs = []
+    for ref in (shot.character_references or []):
+        char_refs.append({
+            "character_id": ref.character_id or "",
+            "reference_image": ref.reference_image or "",
+            "display_name": ref.display_name,
+            "aws_url": ref.aws_url,
+        })
+    retry_payload["character_references"] = char_refs
+
+    # location_references
+    loc_refs = []
+    for ref in (shot.location_references or []):
+        loc_refs.append({
+            "location_id": ref.location_id or "",
+            "reference_image": ref.reference_image or "",
+            "display_name": ref.display_name,
+            "aws_url": ref.aws_url,
+        })
+    retry_payload["location_references"] = loc_refs
+
+    # previous_references
+    prev_refs = []
+    for ref in (shot.previous_references or []):
+        prev_refs.append({
+            "reference_image": ref.reference_image,
+            "display_name": ref.display_name,
+            "aws_url": ref.aws_url,
+        })
+    retry_payload["previous_references"] = prev_refs
+
+    # Build SQS message body with retry_payload
+    import uuid
+    sqs_body = {
+        "executionId": str(ctx_id),
+        "msg_id": str(uuid.uuid4()),
+        "stepKey": step_key,
+        "orgId": org_id,
+        "projectId": project_id,
+        "episodeId": episode_id,
+        "partId": part_id,
+        "action": "retry",
+        "userId": str(user.id),
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "retry_payload": retry_payload,
+    }
+
+    # Save Message record
+    msg = Message(
+        execution_id=str(ctx_id),
+        step_key=step_key,
+        org_id=org_id,
+        project_id=project_id,
+        episode_id=episode_id,
+        part_id=part_id,
+        action="retry",
+        prompt=f"Retry shot {retry_payload['shot_number']}",
+        user_id=str(user.id),
+    )
+    await msg.insert()
+
+    # Send to SQS directly with custom body
+    import json as _json
+    import asyncio
+    from app.services.sqs_service import _sync_send
+    from app.core.config import settings as _settings
+    import hashlib
+
+    queue_url = _settings.AWS_SQS_QUEUE_URL
+    sqs_msg_id = None
+    if queue_url:
+        body_str = _json.dumps(sqs_body, default=str)
+        is_fifo = queue_url.endswith(".fifo")
+        group_id = f"{ctx_id}:generate_images_nano_banana"
+        dedup_id = hashlib.sha256(
+            f"generate_images_nano_banana:retry:{datetime.now(timezone.utc).isoformat()}".encode()
+        ).hexdigest()
+        try:
+            sqs_msg_id = await asyncio.to_thread(
+                _sync_send, queue_url, body_str, group_id, dedup_id, is_fifo
+            )
+        except Exception:
+            pass
+
+    return {
+        "status": "sent",
+        "message_id": str(msg.id),
+        "sqs_message_id": sqs_msg_id,
+        "shot_id": str(shot.id),
+        "action": "retry",
+    }
 

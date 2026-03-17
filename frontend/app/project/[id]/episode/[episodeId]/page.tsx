@@ -38,7 +38,7 @@ export default function EpisodePage() {
   const projectId = params.id as string
   const episodeId = params.episodeId as string
 
-  const [episodeData, setEpisodeData] = useState<{ id: string; episodeNumber: number; bibleText: string | null } | null>(null)
+  const [episodeData, setEpisodeData] = useState<{ id: string; episodeNumber: number; title: string; bibleText: string | null } | null>(null)
   const [parts, setParts] = useState<PartItem[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -64,7 +64,7 @@ export default function EpisodePage() {
         if (!alive) return
         const ep = (fullProject.episodes || []).find((e: any) => e.id === episodeId)
         if (!ep) { console.error('Episode not found in project'); setLoading(false); return }
-        setEpisodeData({ id: ep.id, episodeNumber: ep.episodeNumber, bibleText: ep.bibleText })
+        setEpisodeData({ id: ep.id, episodeNumber: ep.episodeNumber, title: ep.title || '', bibleText: ep.bibleText })
         setParts((ep.parts || []).map((p: any) => ({
           id: p.id, title: p.title, partNumber: p.partNumber,
         })))
@@ -143,7 +143,7 @@ export default function EpisodePage() {
                 </motion.div>
                 <div>
                   <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest">Episode {episodeData.episodeNumber}</p>
-                  <h1 className="text-2xl font-bold text-foreground">Episode {episodeData.episodeNumber}</h1>
+                  <h1 className="text-2xl font-bold text-foreground">{episodeData.title || `Episode ${episodeData.episodeNumber}`}</h1>
                 </div>
               </div>
               <Badge variant="outline" className="text-xs border-accent/30 text-accent bg-accent/5">

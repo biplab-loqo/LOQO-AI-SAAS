@@ -28,6 +28,7 @@ interface PartSummary {
 interface EpisodeSummary {
   id: string
   number: number
+  title: string
   bibleText: string | null
   parts: PartSummary[]
 }
@@ -47,21 +48,26 @@ export default function ProjectOverviewPage() {
   // Create episode dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newEpisodeNumber, setNewEpisodeNumber] = useState(1)
+  const [newEpisodeTitle, setNewEpisodeTitle] = useState('')
   const [isCreating, setIsCreating] = useState(false)
 
   const handleCreateEpisode = async () => {
+    if (!newEpisodeTitle.trim()) return
     try {
       setIsCreating(true)
       const newEpisode = await apiClient.createEpisode(projectId, {
         episodeNumber: newEpisodeNumber,
+        title: newEpisodeTitle.trim(),
       })
       setEpisodes(prev => [...prev, {
         id: newEpisode.id,
         number: newEpisode.episodeNumber,
+        title: newEpisode.title || '',
         bibleText: newEpisode.bibleText ?? null,
         parts: [],
       }])
       setIsCreateDialogOpen(false)
+      setNewEpisodeTitle('')
       setNewEpisodeNumber(prev => prev + 1)
       refreshProjectData()
     } catch (error) { console.error("Failed to create episode", error) }
@@ -79,6 +85,7 @@ export default function ProjectOverviewPage() {
         setEpisodes((data.episodes || []).map((ep: any) => ({
           id: ep.id,
           number: ep.episodeNumber,
+          title: ep.title || '',
           bibleText: ep.bibleText,
           parts: (ep.parts || []).map((p: any) => ({
             id: p.id,
@@ -169,13 +176,17 @@ export default function ProjectOverviewPage() {
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <div className="space-y-2">
+                    <Label htmlFor="ep-title" className="text-xs font-semibold">Episode Title <span className="text-red-400">*</span></Label>
+                    <Input id="ep-title" value={newEpisodeTitle} onChange={(e) => setNewEpisodeTitle(e.target.value)} placeholder="e.g. The Beginning" className="rounded-xl" required />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="ep-number" className="text-xs font-semibold">Episode Number</Label>
                     <Input id="ep-number" type="number" value={newEpisodeNumber} onChange={(e) => setNewEpisodeNumber(parseInt(e.target.value))} className="rounded-xl" />
                   </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="rounded-xl">Cancel</Button>
-                  <Button onClick={handleCreateEpisode} disabled={isCreating} className="rounded-xl bg-accent hover:bg-accent/90 shadow-md">
+                  <Button onClick={handleCreateEpisode} disabled={isCreating || !newEpisodeTitle.trim()} className="rounded-xl bg-accent hover:bg-accent/90 shadow-md">
                     {isCreating ? "Creating..." : "Create Episode"}
                   </Button>
                 </DialogFooter>
@@ -210,8 +221,9 @@ export default function ProjectOverviewPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">
-                              Episode {ep.number}
+                              {ep.title ? ep.title : `Episode ${ep.number}`}
                             </p>
+                            <p className="text-xs text-muted-foreground/60 font-medium">Episode {ep.number}</p>
                             <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
                               <span>{ep.parts.length} part{ep.parts.length !== 1 ? 's' : ''}</span>
                             </div>

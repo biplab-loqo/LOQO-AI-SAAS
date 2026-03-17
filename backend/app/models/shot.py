@@ -1,6 +1,6 @@
 """Shot document — independent shot table."""
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, Field
@@ -8,34 +8,34 @@ from pydantic import BaseModel, Field
 
 class ShotMediaRef(BaseModel):
     object_id: Optional[str] = Field(None, alias="objectId")
-    display_name: str = Field(..., alias="displayName")
-    aws_url: str = Field(..., alias="awsUrl")
+    display_name: Optional[str] = Field(None, alias="displayName")
+    aws_url: Optional[str] = Field(None, alias="awsUrl")
 
     model_config = {"populate_by_name": True}
 
-
 class CharacterReference(BaseModel):
     character_id: Optional[str] = Field(None, alias="characterId")
-    reference_image: Optional[str] = Field(None, alias="referenceImage")
+    # Stored as a single string or a list of strings depending on generation version
+    reference_image: Optional[Union[str, List[str]]] = Field(None, alias="referenceImage")
     display_name: str = Field(..., alias="displayName")
-    aws_url: str = Field(..., alias="awsUrl")
+    aws_url: Union[str, List[str]] = Field(..., alias="awsUrl")
 
     model_config = {"populate_by_name": True}
 
 
 class LocationReference(BaseModel):
     location_id: Optional[str] = Field(None, alias="locationId")
-    reference_image: Optional[str] = Field(None, alias="referenceImage")
+    reference_image: Optional[Union[str, List[str]]] = Field(None, alias="referenceImage")
     display_name: str = Field(..., alias="displayName")
-    aws_url: str = Field(..., alias="awsUrl")
+    aws_url: Union[str, List[str]] = Field(..., alias="awsUrl")
 
     model_config = {"populate_by_name": True}
 
 
 class PreviousReference(BaseModel):
-    reference_image: str = Field(..., alias="referenceImage")
+    reference_image: Union[str, List[str]] = Field(..., alias="referenceImage")
     display_name: str = Field(..., alias="displayName")
-    aws_url: str = Field(..., alias="awsUrl")
+    aws_url: Union[str, List[str]] = Field(..., alias="awsUrl")
 
     model_config = {"populate_by_name": True}
 

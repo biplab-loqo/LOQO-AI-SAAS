@@ -7,11 +7,13 @@ import {
   Users,
   Settings,
   Film,
-  Play,
   Loader2,
   Home,
   ChevronDown,
+  ChevronRight,
   Zap,
+  UserCircle2,
+  MapPin,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
@@ -108,6 +110,7 @@ function ProjectItem({
    ════════════════════════════════════════════════════════════════ */
 function EpisodeHeader({
   episodeNumber,
+  title,
   partCount,
   isExpanded,
   isActive,
@@ -115,45 +118,51 @@ function EpisodeHeader({
   href,
 }: {
   episodeNumber: number
+  title?: string
   partCount: number
   isExpanded: boolean
   isActive: boolean
   onToggle: () => void
   href: string
 }) {
-  const label = `Episode ${episodeNumber}`
+  const label = title?.trim() ? title : `Episode ${episodeNumber}`
   return (
-    <Link href={href}>
-      <motion.button
-        onClick={(e) => {
-          e.preventDefault()
-          onToggle()
-        }}
-        whileHover={{ x: 4 }}
-        whileTap={{ scale: 0.98 }}
+    <div className="flex items-center gap-2">
+      <button
+        onClick={onToggle}
         className={cn(
-          "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium",
-          isActive
-            ? "bg-accent/15 text-accent shadow-sm shadow-accent/10"
-            : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+          "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200",
+          isExpanded ? "bg-accent/15 text-accent" : "bg-muted/40 text-muted-foreground/70 hover:bg-muted/60"
         )}
+        aria-label={isExpanded ? 'Collapse episode' : 'Expand episode'}
       >
-        <ChevronDown
-          size={16}
-          className={cn("flex-shrink-0 transition-transform duration-300", isExpanded ? "rotate-180" : "")}
-        />
-        <Play size={16} className="flex-shrink-0" />
-        <span className="flex-1 text-left">{label}</span>
-        <span className={cn(
-          "text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0",
-          isActive
-            ? "bg-accent/10 text-accent"
-            : "bg-muted/60 text-foreground/60"
-        )}>
-          {partCount}
-        </span>
-      </motion.button>
-    </Link>
+        {isExpanded
+          ? <ChevronDown size={16} className="transition-transform duration-200" />
+          : <ChevronRight size={16} className="transition-transform duration-200" />}
+      </button>
+      <Link href={href} className="flex-1 min-w-0">
+        <motion.div
+          whileHover={{ x: 4 }}
+          whileTap={{ scale: 0.98 }}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium",
+            isActive
+              ? "bg-accent/15 text-accent shadow-sm shadow-accent/10"
+              : "text-foreground/70 hover:text-foreground hover:bg-muted/50"
+          )}
+        >
+          <span className="flex-1 text-left">{label}</span>
+          <span className={cn(
+            "text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0",
+            isActive
+              ? "bg-accent/10 text-accent"
+              : "bg-muted/60 text-foreground/60"
+          )}>
+            {partCount}
+          </span>
+        </motion.div>
+      </Link>
+    </div>
   )
 }
 
@@ -206,6 +215,7 @@ function PartItem({
 interface EpisodeItem {
   id: string
   episodeNumber: number
+  title?: string
   parts: Array<{
     id: string
     partNumber: number
@@ -275,8 +285,7 @@ export default function ProjectSidebarNew({
               .sort((a: any, b: any) => a.episodeNumber - b.episodeNumber)
               .map((ep: any) => ({
                 id: ep.id,
-                episodeNumber: ep.episodeNumber,
-                parts: (ep.parts || [])
+                episodeNumber: ep.episodeNumber,                title: ep.title || '',                parts: (ep.parts || [])
                   .slice()
                   .sort((a: any, b: any) => (a.partNumber ?? 0) - (b.partNumber ?? 0))
                   .map((part: any) => ({
@@ -423,6 +432,7 @@ export default function ProjectSidebarNew({
                   >
                     <EpisodeHeader
                       episodeNumber={ep.episodeNumber}
+                      title={ep.title}
                       partCount={ep.parts.length}
                       isExpanded={isExpanded}
                       isActive={isEpActive}
@@ -443,6 +453,33 @@ export default function ProjectSidebarNew({
                           className="overflow-hidden"
                         >
                           <div className="space-y-1.5 pr-2">
+                            {/* Assets section */}
+                            <div className="w-4/5 ml-auto px-3 pt-2 pb-1 space-y-1">
+                              <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-wider block mb-1.5">Assets</span>
+                              <Link href={`${epHref}/characters`} className="block">
+                                <div className={cn(
+                                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                  pathname.includes(`/episode/${ep.id}/characters`)
+                                    ? "bg-violet-500/15 text-violet-400"
+                                    : "text-foreground/60 hover:text-foreground hover:bg-muted/50"
+                                )}>
+                                  <UserCircle2 size={14} className="flex-shrink-0" />
+                                  <span>Characters</span>
+                                </div>
+                              </Link>
+                              <Link href={`${epHref}/locations`} className="block">
+                                <div className={cn(
+                                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                                  pathname.includes(`/episode/${ep.id}/locations`)
+                                    ? "bg-emerald-500/15 text-emerald-400"
+                                    : "text-foreground/60 hover:text-foreground hover:bg-muted/50"
+                                )}>
+                                  <MapPin size={14} className="flex-shrink-0" />
+                                  <span>Locations</span>
+                                </div>
+                              </Link>
+                            </div>
+
                             {ep.parts.length === 0 ? (
                               <div className="w-4/5 ml-auto px-4 py-3 text-xs text-foreground/40 text-center bg-muted/20 rounded-md border border-border/20">
                                 No acts yet

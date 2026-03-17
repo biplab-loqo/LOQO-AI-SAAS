@@ -764,6 +764,16 @@ export class ApiClient {
     return this.del(`/episodes/${episodeId}`)
   }
 
+  // ── EPISODES — Characters / Locations (episode-level aggregation) ──
+
+  async getEpisodeCharacters(episodeId: string) {
+    return this.get<CharacterOut[]>(`/episodes/${episodeId}/characters`)
+  }
+
+  async getEpisodeLocations(episodeId: string) {
+    return this.get<LocationOut[]>(`/episodes/${episodeId}/locations`)
+  }
+
   // ── PARTS ─────────────────────────────────────────────────
 
   async getParts(projectId: string, episodeId: string) {
@@ -982,9 +992,39 @@ export class ApiClient {
     return this.get<ClipOut[]>(`/workflows/${executionId}/clips/${clipId}/versions`)
   }
 
-  /** Approve a specific Shot version doc (by its _id). Un-approves all sibling versions. */
+  /** Approve a specific Shot version doc (by its _id). Multiple versions per shotId can be approved. */
   async approveShot(executionId: string, shotDocId: string) {
     return this.post<ShotOut>(`/workflows/${executionId}/shots/${shotDocId}/approve`, {})
+  }
+
+  /** Remove approval from a specific Shot version doc (by its _id). */
+  async unapproveShot(executionId: string, shotDocId: string) {
+    return this.post<ShotOut>(`/workflows/${executionId}/shots/${shotDocId}/unapprove`, {})
+  }
+
+  /** Iterate a shot: send instruction to refine the shot image. */
+  async iterateShot(
+    executionId: string,
+    shotDocId: string,
+    instruction: string,
+    opts?: { shot_number?: number; start_image?: string; org_id?: string; project_id?: string; episode_id?: string; part_id?: string },
+  ) {
+    return this.post<{ status: string; message_id: string; sqs_message_id?: string; shot_id: string; action: string }>(
+      `/workflows/${executionId}/shots/${shotDocId}/iterate`,
+      { instruction, ...opts },
+    )
+  }
+
+  /** Retry a shot: re-generate with existing references. */
+  async retryShot(
+    executionId: string,
+    shotDocId: string,
+    opts?: { shot_number?: number; start_image_prompt?: string; character_references?: string[]; location_references?: string[]; previous_references?: string[]; org_id?: string; project_id?: string; episode_id?: string; part_id?: string },
+  ) {
+    return this.post<{ status: string; message_id: string; sqs_message_id?: string; shot_id: string; action: string }>(
+      `/workflows/${executionId}/shots/${shotDocId}/retry`,
+      { ...opts },
+    )
   }
 
   /** Approve a specific Clip version doc (by its _id). Un-approves all sibling versions. */

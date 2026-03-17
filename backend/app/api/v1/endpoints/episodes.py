@@ -10,7 +10,7 @@ DELETE /episodes/{episode_id}         → Delete episode (cascade)
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from app.core.auth import get_current_user
 from app.models.user import User
@@ -18,6 +18,9 @@ from app.models.organization import Organization
 from app.models.project import Project
 from app.models.episode import Episode
 from app.models.part import Part
+from app.models.character import Character
+from app.models.location import Location
+from app.models.workflow_execution import WorkflowExecution
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
@@ -176,3 +179,138 @@ async def delete_episode(
     await ep.delete()
 
     return {"status": "success", "message": "Episode deleted"}
+
+
+# ── Helpers for media normalization ───────────────────────────
+
+def _normalize_media_refs(d: dict) -> dict:
+    """Normalize s3_uri fields to browser-friendly URLs."""
+    from app.core.config import settings
+
+    def _fix(obj: Any) -> Any:
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if k == "s3_uri" and isinstance(v, str) and v.startswith("s3://"):
+                    bucket_and_key = v[5:]
+                    slash = bucket_and_key.find("/")
+                    if slash > 0:
+                        bucket = bucket_and_key[:slash]
+                        key = bucket_and_key[slash + 1:]
+                        obj[k] = f"https://{bucket}.s3.amazonaws.com/{key}"
+                else:
+                    _fix(v)
+            return obj
+        if isinstance(obj, list):
+            for item in obj:
+                _fix(item)
+        return obj
+
+    return _fix(d)
+
+
+def _to_jsonable(d: Any) -> Any:
+    """Recursively convert ObjectId / datetime objects for JSON output."""
+    from bson import ObjectId as BsonOid
+    from datetime import datetime as _dt
+
+    if isinstance(d, dict):
+        return {k: _to_jsonable(v) for k, v in d.items()}
+    if isinstance(d, list):
+        return [_to_jsonable(v) for v in d]
+    if isinstance(d, BsonOid):
+        return str(d)
+    if isinstance(d, _dt):
+        return d.isoformat()
+    return d
+
+
+# ── GET /episodes/{episode_id}/characters ─────────────────────
+
+@router.get("/{episode_id}/characters")
+async def get_episode_characters(
+    episode_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Get all characters across all parts of an episode (latest version per entity)."""
+    await _require_org(current_user)
+
+    ep = await Episode.get(episode_id)
+    if not ep:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    ep_str = str(ep.id)
+
+    rows = await Character.find(
+        {"$or": [
+            {"episode_id": ep_str},
+            {"episodeId": ep_str},
+        ]}
+    ).sort([("version", -1), ("updated_at", -1)]).to_list()
+
+    # Deduplicate by identity — keep only latest version
+    latest: Dict[str, Character] = {}
+    for row in rows:
+        desc = row.character_description or {}
+        key = str(
+            desc.get("character_name")
+            or desc.get("name_identifier")
+            or desc.get("name")
+            or desc.get("display_name")
+            or str(row.id)
+        ).strip().lower()
+        if key not in latest:
+            latest[key] = row
+
+    out: List[Dict[str, Any]] = []
+    for row in latest.values():
+        d = _to_jsonable(row.model_dump(mode="python"))
+        d["id"] = str(row.id)
+        d = _normalize_media_refs(d)
+        out.append(d)
+    return out
+
+
+# ── GET /episodes/{episode_id}/locations ──────────────────────
+
+@router.get("/{episode_id}/locations")
+async def get_episode_locations(
+    episode_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Get all locations across all parts of an episode (latest version per entity)."""
+    await _require_org(current_user)
+
+    ep = await Episode.get(episode_id)
+    if not ep:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    ep_str = str(ep.id)
+
+    rows = await Location.find(
+        {"$or": [
+            {"episode_id": ep_str},
+            {"episodeId": ep_str},
+        ]}
+    ).sort([("version", -1), ("updated_at", -1)]).to_list()
+
+    # Deduplicate by identity — keep only latest version
+    latest: Dict[str, Location] = {}
+    for row in rows:
+        desc = row.location_description or {}
+        key = str(
+            desc.get("location_name")
+            or desc.get("name_identifier")
+            or desc.get("name")
+            or desc.get("display_name")
+            or str(row.id)
+        ).strip().lower()
+        if key not in latest:
+            latest[key] = row
+
+    out: List[Dict[str, Any]] = []
+    for row in latest.values():
+        d = _to_jsonable(row.model_dump(mode="python"))
+        d["id"] = str(row.id)
+        d = _normalize_media_refs(d)
+        out.append(d)
+    return out

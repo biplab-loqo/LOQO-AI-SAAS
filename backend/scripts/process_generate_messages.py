@@ -871,11 +871,6 @@ def _process_one_message(msg: Dict[str, Any]) -> None:
 
     print(f"▶ Processing message {msg['_id']} → steps={step_chain}")
 
-    # Always ensure entity collections are present (and media is not empty) so
-    # Characters/Locations tabs can render image sections from their own tables.
-    _ensure_characters_for_execution(execution)
-    _ensure_locations_for_execution(execution)
-
     for step_key in step_chain:
         if step_key in CHAR_STEPS:
             _ensure_characters_for_execution(execution)

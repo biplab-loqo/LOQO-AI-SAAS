@@ -336,9 +336,9 @@ function ImageLightbox({ urls, startIndex, label, onClose }: {
 
         {/* Caption + counter + dot indicators */}
         <div className="mt-2.5 flex items-center justify-center gap-3">
-          {label && <p className="text-white/70 text-[13px] font-medium truncate max-w-[300px]">{label}</p>}
+          {label && <p className="text-white text-[18px] font-bold truncate max-w-[400px]">{label}</p>}
           {hasMany && (
-            <span className="text-white/40 text-[11px] flex-shrink-0">{idx + 1} / {urls.length}</span>
+            <span className="text-white/50 text-[14px] font-semibold flex-shrink-0">{idx + 1} / {urls.length}</span>
           )}
           {hasMany && urls.length <= 16 && (
             <div className="flex items-center gap-1">
@@ -514,10 +514,10 @@ function LabeledImageGrid({ images, onIterateImage, isAnchor = false }: { images
   if (!images.length) return null
   
   if (isAnchor) {
-    // Anchor images: show iterate button at top-right (same style as reference grid)
+    // Anchor images: full width, iterate button at top-right
     return (
       <ImageGalleryCtx.Provider value={galleryCtx}>
-        <div className="mt-2 grid grid-cols-2 gap-3">
+        <div className="mt-2 flex flex-col gap-3">
           {images.map((img, i) => (
             <div key={img.url + i} className="relative group">
               <S3Image url={img.url} label={img.label} className="w-full rounded-xl" />
@@ -902,7 +902,7 @@ function UniversalRenderer({ data, stepKey, approvedStepKeys = new Set(), onRequ
               return (
                 <StepCard key={idx} p={p} width={arrKey === 'storyboard' ? 420 : 400} idx={idx}
                   onRequestEdit={!isStepApproved && onRequestEditCard ? () => onRequestEditCard({ cardTitle: title, cardData: item, mergeType: 'array-item', parentKey: arrKey, arrayIndex: idx }) : undefined}
-                  header={<div className="flex items-center gap-3"><div className={cn('w-8 h-8 rounded-xl flex items-center justify-center', p.bg)}><Icon className={cn('w-4 h-4', p.accent)} /></div><span className="text-base font-bold text-foreground truncate max-w-[300px]">{title}</span></div>}>
+                  header={<div className="flex items-center gap-3"><div className={cn('w-8 h-8 rounded-xl flex items-center justify-center', p.bg)}><span className={cn('text-xs font-black', p.accent)}>{idx + 1}</span></div><span className="text-base font-bold text-foreground truncate max-w-[300px]">{title}</span></div>}>
                   <div className="p-4 space-y-0.5 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30">
                     {Object.entries(item).map(([k, v]) => <RenderValue key={k} label={k} value={v} accent={p.accent} />)}
                     {itemImages.length > 0 && <ImageGrid urls={itemImages} name={title} />}
@@ -940,7 +940,7 @@ function UniversalRenderer({ data, stepKey, approvedStepKeys = new Set(), onRequ
                     header={
                       <div className="flex items-center gap-3">
                         <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', p.bg)}>
-                          <Icon className={cn('w-5 h-5', p.accent)} />
+                          <span className={cn('text-sm font-black', p.accent)}>{idx + 1}</span>
                         </div>
                         <span className="text-base font-bold text-foreground truncate max-w-[280px]">{title}</span>
                       </div>
@@ -1153,7 +1153,7 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
               header={
                 <div className="flex items-center gap-3">
                   <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', p.bg)}>
-                    <Icon className={cn('w-5 h-5', p.accent)} />
+                    <span className={cn('text-sm font-black', p.accent)}>{idx + 1}</span>
                   </div>
                   <div className="min-w-0">
                     <Tooltip>
@@ -1360,13 +1360,14 @@ function EntityPageRenderer({ data, tabKey, approvedStepKeys = new Set(), onIter
 
 // ─── Shots Renderer (independent `shots` table) ───────────────
 
-function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApproveShots, approvingShots }: {
+function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApproveShots, approvingShots, tabStatus }: {
   data: Record<string, any>
   executionId: string
   onEditShot?: (shot: ShotOut) => void
   onIterateShot?: (shot: ShotOut) => void
   onApproveShots?: () => void
   approvingShots?: boolean
+  tabStatus?: string
 }) {
   const p = getPalette('shots')
   const Icon = Clapperboard
@@ -1375,6 +1376,7 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
   const [groups, setGroups] = useState<ShotGroup[]>([])
   const [loadingAll, setLoadingAll] = useState(true)
   const [approvingDocId, setApprovingDocId] = useState<string | null>(null)
+  const isStepApproved = tabStatus === 'approved'
 
   // Load ALL versions for all shots in one call
   useEffect(() => {
@@ -1420,24 +1422,67 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
     )
   }
   if (groups.length === 0) {
+    if (tabStatus === 'locked' || tabStatus === 'ready') {
+      return <LockedStepPlaceholder stepKey="generate_images_nano_banana" stepName="Shots" canGenerate={tabStatus === 'ready'} />
+    }
+    if (tabStatus === 'running') {
+      return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center min-h-[320px] gap-5">
+          <div className={cn('p-5 rounded-2xl border', getPalette('shots').bgSoft, getPalette('shots').borderSoft)}>
+            <Loader2 className={cn('w-10 h-10 text-accent animate-spin')} />
+          </div>
+          <div className="text-center">
+            <p className="text-base font-semibold text-foreground">Generating Shots…</p>
+            <p className="text-sm text-muted-foreground mt-1.5">Your shots are being created. This may take a moment.</p>
+          </div>
+        </motion.div>
+      )
+    }
     return <EmptyState icon={Icon} label="No Shots data" sub="Content will appear from the shots collection" />
   }
 
   const handleApprove = async (shot: ShotOut) => {
     setApprovingDocId(shot.id)
     try {
-      const updated = await apiClient.approveShot(executionId, shot.id)
-      setGroups(prev => prev.map(g =>
-        g.shotId === shot.shotId
-          ? {
-              ...g,
-              versions: [...g.versions.map(v => v.id === updated.id ? updated : { ...v, isApproved: false })]
-                .sort((a, b) => { if (a.isApproved !== b.isApproved) return a.isApproved ? -1 : 1; return b.version - a.version })
-            }
-          : g
-      ))
-    } catch {
-      // silently ignore
+      await apiClient.approveShot(executionId, shot.id)
+      // Re-fetch all shots fresh from server to guarantee correct isApproved state
+      const all = await apiClient.getWorkflowShots(executionId, { latest_only: false })
+      const map = new Map<string, ShotOut[]>()
+      all.forEach(s => { const arr = map.get(s.shotId) ?? []; arr.push(s); map.set(s.shotId, arr) })
+      const grps: ShotGroup[] = [...map.entries()].map(([shotId, vs]) => ({
+        shotId,
+        versions: [...vs].sort((a, b) => {
+          if (a.isApproved !== b.isApproved) return a.isApproved ? -1 : 1
+          return b.version - a.version
+        }),
+      }))
+      grps.sort((a, b) => (a.versions[0]?.sequenceNo ?? 0) - (b.versions[0]?.sequenceNo ?? 0))
+      setGroups(grps)
+    } catch (e) {
+      console.error('Shot approve failed:', e)
+    } finally {
+      setApprovingDocId(null)
+    }
+  }
+
+  const handleUnapprove = async (shot: ShotOut) => {
+    setApprovingDocId(shot.id)
+    try {
+      await apiClient.unapproveShot(executionId, shot.id)
+      const all = await apiClient.getWorkflowShots(executionId, { latest_only: false })
+      const map = new Map<string, ShotOut[]>()
+      all.forEach(s => { const arr = map.get(s.shotId) ?? []; arr.push(s); map.set(s.shotId, arr) })
+      const grps: ShotGroup[] = [...map.entries()].map(([shotId, vs]) => ({
+        shotId,
+        versions: [...vs].sort((a, b) => {
+          if (a.isApproved !== b.isApproved) return a.isApproved ? -1 : 1
+          return b.version - a.version
+        }),
+      }))
+      grps.sort((a, b) => (a.versions[0]?.sequenceNo ?? 0) - (b.versions[0]?.sequenceNo ?? 0))
+      setGroups(grps)
+    } catch (e) {
+      console.error('Shot unapprove failed:', e)
     } finally {
       setApprovingDocId(null)
     }
@@ -1458,7 +1503,7 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
               style={{ width: 370 }}
             >
               {/* ── Shot heading + intent title ── */}
-              <div className="px-3 py-2 rounded-lg bg-secondary/60 border border-border/20">
+              <div className="px-3 py-2 rounded-lg bg-secondary/60 border border-border/20 h-[110px] flex flex-col">
                 <div className="flex items-center gap-2.5">
                   <div className="w-6 h-6 rounded-lg bg-black/30 flex items-center justify-center flex-shrink-0">
                     <Clapperboard size={13} className="text-emerald-400" />
@@ -1466,11 +1511,15 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
                   <p className="text-sm font-bold text-foreground">Shot {shotNum}</p>
                   <span className="ml-auto text-[10px] font-bold text-foreground/60 bg-secondary rounded-md px-1.5 py-0.5">{group.versions.length} ver</span>
                 </div>
-                {latest?.oneLinerShotIntent && (
-                  <p className="text-[14px] font-medium text-foreground/90 mt-2 leading-relaxed pl-[34px]">
-                    {latest.oneLinerShotIntent}
-                  </p>
-                )}
+                <div className="flex-1 min-h-0 mt-1.5 pl-[34px] overflow-hidden">
+                  {latest?.oneLinerShotIntent ? (
+                    <p className="text-[13px] font-medium text-foreground/80 leading-snug line-clamp-3">
+                      {latest.oneLinerShotIntent}
+                    </p>
+                  ) : (
+                    <p className="text-[12px] text-muted-foreground/40 italic">No description</p>
+                  )}
+                </div>
               </div>
 
               {/* ── All versions (flat, no collapsible) ── */}
@@ -1492,11 +1541,14 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-black/50 text-white/80">v{shot.version}</span>
                             {isApproved && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/80 text-white">✓ Approved</span>
+                              <span className="flex items-center gap-1 text-[10px] font-bold px-3 py-1 rounded-lg bg-emerald-500/70 text-white">
+                                <CheckCircle size={14} />
+                                Approved
+                              </span>
                             )}
                           </div>
-                          {/* Edit + Iterate buttons (hidden when tab is approved) */}
-                          {(onEditShot || onIterateShot) && (
+                          {/* Edit + Iterate buttons */}
+                          {!isStepApproved && (onEditShot || onIterateShot) && (
                             <div className="flex items-center gap-1">
                               {onEditShot && (
                                 <button
@@ -1518,7 +1570,7 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
                           )}
                         </div>
                         {/* Bottom hover gradient: approve */}
-                        {!isApproved && (
+                        {!isApproved && !isStepApproved && (
                           <div className="absolute bottom-0 left-0 right-0 flex items-end justify-end px-2.5 pb-2.5 pt-8 opacity-0 group-hover:opacity-100 transition-opacity"
                             style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }}>
                             <button
@@ -1575,14 +1627,13 @@ function ShotsRenderer({ data, executionId, onEditShot, onIterateShot, onApprove
 
 // ─── AnimationsRenderer (independent `clips` table) ──────────
 
-function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip }: { data: Record<string, any>; executionId: string; onEditClip?: (clip: ClipOut) => void; onIterateClip?: (clip: ClipOut) => void }) {
+function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip, tabStatus }: { data: Record<string, any>; executionId: string; onEditClip?: (clip: ClipOut) => void; onIterateClip?: (clip: ClipOut) => void; tabStatus?: string }) {
   const p = getPalette('animations')
   const Icon = PlayCircle
 
   type ClipGroup = { clipId: string; versions: ClipOut[] }
   const [groups, setGroups] = useState<ClipGroup[]>([])
   const [loadingAll, setLoadingAll] = useState(true)
-  const [approvingDocId, setApprovingDocId] = useState<string | null>(null)
   const [selectedClip, setSelectedClip] = useState<ClipOut | null>(null)
 
   useEffect(() => {
@@ -1599,11 +1650,7 @@ function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip }: { 
         })
         const grps: ClipGroup[] = [...map.entries()].map(([clipId, vs]) => ({
           clipId,
-          // approved version always first, then latest-first within unapproved
-          versions: [...vs].sort((a, b) => {
-            if (a.isApproved !== b.isApproved) return a.isApproved ? -1 : 1
-            return b.version - a.version
-          }),
+          versions: [...vs].sort((a, b) => b.version - a.version),
         }))
         grps.sort((a, b) => (a.versions[0]?.sequenceNo ?? 0) - (b.versions[0]?.sequenceNo ?? 0))
         setGroups(grps)
@@ -1628,29 +1675,25 @@ function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip }: { 
     )
   }
   if (groups.length === 0) {
+    if (tabStatus === 'locked' || tabStatus === 'ready') {
+      return <LockedStepPlaceholder stepKey="generate_animations" stepName="Animations" canGenerate={tabStatus === 'ready'} />
+    }
+    if (tabStatus === 'running') {
+      return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center min-h-[320px] gap-5">
+          <div className={cn('p-5 rounded-2xl border', getPalette('animations').bgSoft, getPalette('animations').borderSoft)}>
+            <Loader2 className={cn('w-10 h-10 text-accent animate-spin')} />
+          </div>
+          <div className="text-center">
+            <p className="text-base font-semibold text-foreground">Generating Animations…</p>
+            <p className="text-sm text-muted-foreground mt-1.5">Your animations are being created. This may take a moment.</p>
+          </div>
+        </motion.div>
+      )
+    }
     return <EmptyState icon={Icon} label="No Animations yet" sub="Content will appear from the clips collection" />
   }
 
-  const handleApprove = async (clip: ClipOut) => {
-    setApprovingDocId(clip.id)
-    try {
-      const updated = await apiClient.approveClip(executionId, clip.id)
-      setGroups(prev => prev.map(g =>
-        g.clipId === clip.clipId
-          ? {
-              ...g,
-              versions: [...g.versions.map(v => v.id === updated.id ? updated : { ...v, isApproved: false })]
-                .sort((a, b) => { if (a.isApproved !== b.isApproved) return a.isApproved ? -1 : 1; return b.version - a.version })
-            }
-          : g
-      ))
-      setSelectedClip(prev => prev?.id === clip.id ? updated : prev)
-    } catch {
-      // silently ignore
-    } finally {
-      setApprovingDocId(null)
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -1679,7 +1722,6 @@ function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip }: { 
 
               {/* ── All versions — click to open detail modal ── */}
               {group.versions.map((clip) => {
-                const isApproved = clip.isApproved
                 return (
                   <div
                     key={clip.id}
@@ -1692,11 +1734,7 @@ function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip }: { 
                         style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)' }}>
                         <div className="flex items-center gap-1.5">
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-black/50 text-white/80">v{clip.version}</span>
-                          {isApproved && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/80 text-white">✓ Approved</span>
-                          )}
                         </div>
-                        {/* Edit + Iterate buttons (hidden when tab is approved) */}
                         {(onEditClip || onIterateClip) && (
                           <div className="flex items-center gap-1">
                             {onEditClip && (
@@ -1763,9 +1801,6 @@ function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip }: { 
                 </div>
                 <p className="text-sm font-semibold text-foreground">Clip {selectedClip.sequenceNo}</p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">v{selectedClip.version}</span>
-                {selectedClip.isApproved && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500 text-white">✓ Approved</span>
-                )}
               </div>
               <button
                 onClick={() => setSelectedClip(null)}
@@ -1808,16 +1843,7 @@ function AnimationsRenderer({ data, executionId, onEditClip, onIterateClip }: { 
               >
                 <RefreshCw size={13} /> Iterate
               </button>
-              {!selectedClip.isApproved && (
-                <button
-                  onClick={() => handleApprove(selectedClip)}
-                  disabled={approvingDocId === selectedClip.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/80 hover:bg-emerald-500 border border-emerald-400/30 text-white text-sm font-semibold transition-all disabled:opacity-50"
-                >
-                  {approvingDocId === selectedClip.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
-                  Approve
-                </button>
-              )}
+
             </div>
           </div>
         </div>
@@ -1939,10 +1965,19 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
     try {
       if (panelTask.targetType === 'shot') {
         const shot = panelTask.item
+        // Update the shot data first
         await apiClient.updateShot(executionId, shot.shotId, {
           startImagePrompt: editDraft.startImagePrompt ?? '',
           characterReferences: charRefs.map(r => ({ characterId: '', referenceImage: r.awsUrl, displayName: r.displayName, awsUrl: r.awsUrl })),
           locationReferences:  locRefs.map(r => ({ locationId: '', referenceImage: r.awsUrl, displayName: r.displayName, awsUrl: r.awsUrl })),
+        })
+        // Then trigger a retry via the dedicated SQS endpoint
+        await apiClient.retryShot(executionId, shot.id, {
+          shot_number: shot.shotMetadata?.shotNumber ?? shot.sequenceNo,
+          start_image_prompt: editDraft.startImagePrompt ?? '',
+          character_references: charRefs.map(r => r.awsUrl),
+          location_references: locRefs.map(r => r.awsUrl),
+          previous_references: (shot.previousReferences ?? []).map((r: any) => r.awsUrl ?? r).filter(Boolean),
         })
       } else {
         const clip = panelTask.item
@@ -1980,22 +2015,29 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
     if (!iteratePrompt.trim() || !panelTask || panelTask.mode !== 'iterate') return
     setIterateSending(true)
     try {
-      let stepKey = ''
       if (panelTask.targetType === 'shot') {
-        stepKey = 'generate_images_nano_banana'
+        // Use dedicated shot iterate endpoint (SQS with iterate_payload)
+        const shot = panelTask.item
+        await apiClient.iterateShot(executionId, shot.id, iteratePrompt, {
+          shot_number: shot.shotMetadata?.shotNumber ?? shot.sequenceNo,
+          start_image: shot.startImage?.awsUrl,
+        })
       } else if (panelTask.targetType === 'clip') {
-        stepKey = 'generate_animations'
+        const stepKey = 'generate_animations'
+        await apiClient.iterateStep(executionId, stepKey, iteratePrompt, {
+          org_id: orgId, project_id: projectId, episode_id: episodeId, part_id: partId,
+        })
       } else if (panelTask.targetType === 'entity-image') {
         const preferred = panelTask.item.imageType === 'anchor'
           ? panelTask.item.anchorStepKey
           : panelTask.item.referenceStepKey
-        stepKey = preferred || panelTask.item.stepKey
+        const stepKey = preferred || panelTask.item.stepKey
+        await apiClient.iterateStep(executionId, stepKey, iteratePrompt, {
+          org_id: orgId, project_id: projectId, episode_id: episodeId, part_id: partId,
+        })
       } else {
         return
       }
-      await apiClient.iterateStep(executionId, stepKey, iteratePrompt, {
-        org_id: orgId, project_id: projectId, episode_id: episodeId, part_id: partId,
-      })
       setIteratePrompt('')
       onCancelTask()
     } catch { /* silent */ }
@@ -2987,12 +3029,15 @@ export default function PartStudioPage() {
         const execIdx = execution.steps.findIndex(s => s.step_key === sk)
         if (execIdx >= 0 && execIdx + 1 < execution.steps.length) {
           const afterStep = execution.steps[execIdx + 1]
+          // Resolve the label of the tab that owns the next execution step
+          const nextTabEntry = STEP_DISPLAY_TEMPLATE.find(t => t.stepKeys.includes(afterStep.step_key))
+          const nextTabLabel = nextTabEntry?.label ?? stepDisplayName(afterStep.step_key)
           return {
             approveKey: sk,
             nextStatus: afterStep.status as string,
             isLastConstituent: true,
             currentLabel: activeTemplate.subStepLabels?.[i] ?? activeTemplate.label,
-            nextLabel: null,
+            nextLabel: nextTabLabel,
           }
         }
       }
@@ -3128,6 +3173,7 @@ export default function PartStudioPage() {
                       className={cn(
                         'flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all duration-150',
                         isActive ? 'bg-accent text-accent-foreground shadow-sm'
+                          : (isLocked || isReady) ? 'text-muted-foreground/40 hover:text-muted-foreground/60 hover:bg-secondary/30 opacity-50'
                           : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                       )}>
                       {isRunning ? <Loader2 size={12} className="animate-spin opacity-70 flex-shrink-0" />
@@ -3156,8 +3202,16 @@ export default function PartStudioPage() {
 
         {/* Scrollable main content */}
         <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-8 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/30">
-          {tabLoading ? (
-            <SkeletonCards />
+          {tabLoading || (activeTemplate?.status === 'running' && !tabData[activeTab ?? '']) ? (
+            <div className="flex flex-col items-center justify-center min-h-[320px] gap-5">
+              <div className="p-5 rounded-2xl bg-accent/10 border border-accent/20">
+                <Loader2 className="w-10 h-10 text-accent animate-spin" />
+              </div>
+              <div className="text-center">
+                <p className="text-base font-semibold text-foreground">{activeTemplate?.label ?? 'Loading'}</p>
+                <p className="text-sm text-muted-foreground mt-1.5">Loading step data…</p>
+              </div>
+            </div>
           ) : !activeTab ? (
             <div className="flex flex-col items-center justify-center gap-4 text-center min-h-[300px]">
               <div className="p-4 rounded-2xl bg-accent/5 border border-accent/10"><Sparkles size={32} className="text-accent/40" /></div>
@@ -3210,6 +3264,45 @@ export default function PartStudioPage() {
                         </Button>
                       </motion.div>
                     )}
+
+                    {/* In-progress banner: next sub-step is running (within this tab) */}
+                    {tabApprovalState?.nextStatus === 'running' && !tabApprovalState.isLastConstituent && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl border border-accent/20 bg-accent/5"
+                      >
+                        <Loader2 size={16} className="text-accent animate-spin flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">
+                            {`Generating ${tabApprovalState.nextLabel ?? 'next step'}…`}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">This may take a moment.</p>
+                        </div>
+                        <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20">
+                          <Loader2 size={11} className="text-accent animate-spin" />
+                          <span className="text-[11px] text-accent font-medium">Running</span>
+                        </div>
+                      </motion.div>
+                    )}
+                    {/* Tab-level running banner: current tab itself is being generated (no constituent succeeded yet) */}
+                    {activeTemplate?.status === 'running' && !tabApprovalState && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl border border-accent/20 bg-accent/5"
+                      >
+                        <Loader2 size={16} className="text-accent animate-spin flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">Generating {activeTemplate.label}…</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">This may take a moment.</p>
+                        </div>
+                        <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/20">
+                          <Loader2 size={11} className="text-accent animate-spin" />
+                          <span className="text-[11px] text-accent font-medium">Running</span>
+                        </div>
+                      </motion.div>
+                    )}
                     {/* approved status — no banner shown */}
 
                     {tabData[activeTab]?._layout === 'entity-page' ? (
@@ -3217,7 +3310,7 @@ export default function PartStudioPage() {
                         data={tabData[activeTab]!}
                         tabKey={activeTab}
                         approvedStepKeys={approvedStepKeySet}
-                        onRequestEditCard={handleEditCard}
+                        onRequestEditCard={activeTemplate?.status === 'approved' ? undefined : handleEditCard}
                         onIterateImage={(payload) => {
                           setPanelTask({
                             mode: 'iterate',
@@ -3241,24 +3334,26 @@ export default function PartStudioPage() {
                       <ShotsRenderer
                         data={tabData[activeTab]!}
                         executionId={executionId ?? ''}
-                        onEditShot={activeTemplate?.status === 'approved' ? undefined : handleEditShot}
-                        onIterateShot={activeTemplate?.status === 'approved' ? undefined : handleIterateShot}
+                        onEditShot={handleEditShot}
+                        onIterateShot={handleIterateShot}
                         onApproveShots={tabApprovalState?.nextStatus === 'not_started' ? () => handleApprove(tabApprovalState!.approveKey) : undefined}
                         approvingShots={approvingStep === tabApprovalState?.approveKey}
+                        tabStatus={activeTemplate?.status}
                       />
                     ) : tabData[activeTab]?._layout === 'animations' ? (
                       <AnimationsRenderer
                         data={tabData[activeTab]!}
                         executionId={executionId ?? ''}
-                        onEditClip={activeTemplate?.status === 'approved' ? undefined : handleEditClip}
-                        onIterateClip={activeTemplate?.status === 'approved' ? undefined : handleIterateClip}
+                        onEditClip={handleEditClip}
+                        onIterateClip={handleIterateClip}
+                        tabStatus={activeTemplate?.status}
                       />
                     ) : (
                       <UniversalRenderer
                         stepKey={activeTab}
                         data={tabData[activeTab] ?? {}}
                         approvedStepKeys={approvedStepKeySet}
-                        onRequestEditCard={handleEditCard}
+                        onRequestEditCard={activeTemplate?.status === 'approved' ? undefined : handleEditCard}
                       />
                     )}
                   </>
