@@ -32,10 +32,15 @@ Step Versions
 ─────────────
   GET    /workflows/step-versions/{version_id}      — single step version by ID
 """
+import re
+import logging
+
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from copy import deepcopy
 from bson import ObjectId
+
+logger = logging.getLogger("loqo.workflows")
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic_core import ValidationError as PydanticCoreValidationError
@@ -138,6 +143,9 @@ class ShotIterateBody(BaseModel):
 
 class ShotRetryBody(BaseModel):
     """Retry a specific shot — re-generate with existing references."""
+    # Optional override prompt to use for the retry (instead of stored shot prompt)
+    start_image_prompt: Optional[str] = None
+
     org_id: Optional[str] = None
     project_id: Optional[str] = None
     episode_id: Optional[str] = None
@@ -736,6 +744,42 @@ def _deep_convert_s3_uris(value: Any) -> Any:
     return value
 
 
+def _parse_shot_number(shot_id: str) -> Optional[int]:
+    """Parse a shot identifier into its numeric shot number.
+
+    Accepts values like "shot_03" or "3".
+    """
+    if not shot_id:
+        return None
+
+    m = re.match(r"^shot_(\d+)$", shot_id)
+    if m:
+        return int(m.group(1))
+    if shot_id.isdigit():
+        return int(shot_id)
+    return None
+
+
+def _flatten_ref_fields(refs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Normalize reference arrays: flatten any list fields to single first value.
+    Handles legacy data where referenceImage or awsUrl might be stored as arrays.
+    """
+    result = []
+    for ref in (refs or []):
+        r = dict(ref)
+        # Flatten referenceImage: if it's a list, take first element
+        if isinstance(r.get("referenceImage"), list):
+            imgs = r["referenceImage"]
+            r["referenceImage"] = imgs[0] if imgs else ""
+        # Flatten awsUrl: if it's a list, take first element
+        if isinstance(r.get("awsUrl"), list):
+            urls = r["awsUrl"]
+            r["awsUrl"] = urls[0] if urls else ""
+        result.append(r)
+    return result
+
+
 def _normalize_shot_row(row: Dict[str, Any]) -> Dict[str, Any]:
     """Map legacy snake_case shot docs to current camelCase response shape."""
     d = dict(row)
@@ -819,6 +863,14 @@ def _normalize_shot_row(row: Dict[str, Any]) -> Dict[str, Any]:
             refs.append(rr)
         d["previousReferences"] = refs
 
+    # Flatten reference fields (handle legacy arrays or malformed data)
+    if isinstance(d.get("characterReferences"), list):
+        d["characterReferences"] = _flatten_ref_fields(d["characterReferences"])
+    if isinstance(d.get("locationReferences"), list):
+        d["locationReferences"] = _flatten_ref_fields(d["locationReferences"])
+    if isinstance(d.get("previousReferences"), list):
+        d["previousReferences"] = _flatten_ref_fields(d["previousReferences"])
+
     return _deep_convert_s3_uris(d)
 
 
@@ -870,6 +922,10 @@ def _normalize_clip_row(row: Dict[str, Any]) -> Dict[str, Any]:
                 rr["awsUrl"] = rr.get("aws_url")
             imgs.append(rr)
         d["inputImages"] = imgs
+
+    # Flatten reference fields (handle legacy arrays or malformed data)
+    if isinstance(d.get("inputImages"), list):
+        d["inputImages"] = _flatten_ref_fields(d["inputImages"])
 
     return _deep_convert_s3_uris(d)
 
@@ -1317,14 +1373,57 @@ async def update_shot(
     """Edit a shot's fields → inserts a new Shot version, returns updated doc."""
     _, ctx_id = await _resolve_ctx_id(execution_id)
 
-    rows = await Shot.find(
-        {"executionId": ctx_id, "shotId": shot_id}
-    ).sort([("version", -1)]).to_list()
+    # Use raw pymongo query to handle both executionId/execution_id naming and
+    # ObjectId/string storage variations in legacy documents.
+    #
+    # Some legacy docs may not have `shotId`/`shot_id` set, and instead only store
+    # `shot_number` (or `shot_metadata.shot_number`). In that case we still want to
+    # be able to find the shot based on the URL path param (e.g. "shot_03").
+    motor_col = Shot.get_pymongo_collection()
+    ctx_str = str(ctx_id)
 
-    if not rows:
+    shot_num = _parse_shot_number(shot_id)
+
+    query_clauses = [
+        {"executionId": ctx_id, "shotId": shot_id},
+        {"executionId": ctx_str, "shotId": shot_id},
+        {"execution_id": ctx_str, "shot_id": shot_id},
+        {"execution_id": ctx_id, "shot_id": shot_id},
+    ]
+
+    if shot_num is not None:
+        query_clauses += [
+            {"executionId": ctx_id, "shot_number": shot_num},
+            {"executionId": ctx_str, "shot_number": shot_num},
+            {"execution_id": ctx_str, "shot_number": shot_num},
+            {"execution_id": ctx_id, "shot_number": shot_num},
+            {"executionId": ctx_id, "shot_metadata.shot_number": shot_num},
+            {"execution_id": ctx_id, "shot_metadata.shot_number": shot_num},
+        ]
+
+    cursor = motor_col.find({"$or": query_clauses}).sort("version", -1)
+    rows_raw = await cursor.to_list(None)
+
+    if not rows_raw:
         raise HTTPException(404, f"Shot '{shot_id}' not found for execution '{execution_id}'")
 
-    latest = rows[0]
+    latest_raw = rows_raw[0]
+    norm = _normalize_shot_row(latest_raw)
+
+    # Try to load as a Beanie document; fall back to constructing from normalized data
+    try:
+        latest = await Shot.get(latest_raw["_id"])
+    except Exception:
+        # Malformed doc — build a minimal Shot so we can insert a new version
+        latest = Shot(
+            execution_id=ctx_id,
+            shot_id=norm.get("shotId") or shot_id,
+            sequence_no=int(norm.get("sequenceNo") or 0),
+            version=int(latest_raw.get("version") or 1),
+            one_liner_shot_intent=norm.get("oneLinerShotIntent") or "",
+            start_image_prompt=norm.get("startImagePrompt") or "",
+        )
+
     new_shot = deepcopy(latest)
     new_shot.id = None          # let Beanie generate a new _id
     new_shot.version = latest.version + 1
@@ -1365,9 +1464,21 @@ async def get_shot_versions(
     """Return all versions of a shot, oldest first."""
     _, ctx_id = await _resolve_ctx_id(execution_id)
 
-    rows = await Shot.find(
-        {"executionId": ctx_id, "shotId": shot_id}
-    ).sort([("version", 1)]).to_list()
+    shot_num = _parse_shot_number(shot_id)
+
+    query_clauses = [
+        {"executionId": ctx_id, "shotId": shot_id},
+        {"execution_id": ctx_id, "shot_id": shot_id},
+    ]
+    if shot_num is not None:
+        query_clauses += [
+            {"executionId": ctx_id, "shot_number": shot_num},
+            {"execution_id": ctx_id, "shot_number": shot_num},
+            {"executionId": ctx_id, "shot_metadata.shot_number": shot_num},
+            {"execution_id": ctx_id, "shot_metadata.shot_number": shot_num},
+        ]
+
+    rows = await Shot.find({"$or": query_clauses}).sort([("version", 1)]).to_list()
 
     out = []
     for row in rows:
@@ -1606,12 +1717,7 @@ async def iterate_shot(
     body: ShotIterateBody,
     user: User = Depends(get_current_user),
 ):
-    """Iterate a specific shot with a text instruction.
-
-    Builds an SQS message with action='iterate' and an iterate_payload
-    containing the shot metadata and instruction.
-    Also saves a Message record for auditability.
-    """
+    """Iterate a specific shot with a text instruction."""
     _, ctx_id = await _resolve_ctx_id(execution_id)
 
     try:
@@ -1619,26 +1725,38 @@ async def iterate_shot(
     except Exception:
         raise HTTPException(400, "Invalid shot_doc_id")
 
-    shot = await Shot.get(doc_oid)
-    if not shot or str(shot.execution_id) != str(ctx_id):
+    # Use raw pymongo query to bypass Pydantic validation on potentially partial/legacy docs
+    motor_col = Shot.get_pymongo_collection()
+    raw = await motor_col.find_one({"_id": doc_oid})
+    if not raw:
+        raise HTTPException(404, f"Shot '{shot_doc_id}' not found")
+    raw_exec_id = raw.get("executionId") or raw.get("execution_id") or ""
+    if str(raw_exec_id) != str(ctx_id):
         raise HTTPException(404, f"Shot '{shot_doc_id}' not found in this execution")
 
-    step_key = ["generate_images_nano_banana"]
-    org_id = body.org_id or str(getattr(shot, "org_id", "") or "")
-    project_id = body.project_id or str(getattr(shot, "project_id", "") or "")
-    episode_id = body.episode_id or str(getattr(shot, "episode_id", "") or "")
-    part_id = body.part_id or str(getattr(shot, "part_id", "") or "")
+    # Normalize to camelCase dict (also resolves S3 URIs to HTTPS)
+    shot = _normalize_shot_row(raw)
 
-    iterate_payload = {
-        "shot_number": shot.shot_metadata.shot_number if shot.shot_metadata else shot.sequence_no,
-        "base_shot_id": str(shot.id),
+    step_key = ["generate_images_nano_banana"]
+    org_id = body.org_id or str(raw.get("orgId") or raw.get("org_id") or "")
+    project_id = body.project_id or str(raw.get("projectId") or raw.get("project_id") or "")
+    episode_id = body.episode_id or str(raw.get("episodeId") or raw.get("episode_id") or "")
+    part_id = body.part_id or str(raw.get("partId") or raw.get("part_id") or "")
+
+    shot_meta = shot.get("shotMetadata") or {}
+    shot_num = shot_meta.get("shotNumber") or shot.get("sequenceNo") or raw.get("shot_number") or 1
+
+    iterate_payload: Dict[str, Any] = {
+        "shot_number": shot_num,
+        "base_shot_id": str(raw["_id"]),
         "instruction": body.instruction,
     }
-    if shot.start_image:
+    start_image = shot.get("startImage")
+    if start_image and isinstance(start_image, dict):
         iterate_payload["start_image"] = {
-            "object_id": shot.start_image.object_id or f"start_image_{shot.sequence_no}_{ctx_id}",
-            "display_name": shot.start_image.display_name,
-            "aws_url": shot.start_image.aws_url,
+            "object_id": start_image.get("objectId") or f"start_image_{shot_num}_{ctx_id}",
+            "display_name": start_image.get("displayName") or "",
+            "aws_url": start_image.get("awsUrl") or "",
         }
 
     # Build SQS message body with iterate_payload
@@ -1656,6 +1774,13 @@ async def iterate_shot(
         "createdAt": datetime.now(timezone.utc).isoformat(),
         "iterate_payload": iterate_payload,
     }
+
+    logger.info(
+        "SQS iterate message built (execution=%s shot=%s): %s",
+        ctx_id,
+        shot_doc_id,
+        sqs_body,
+    )
 
     # Save Message record
     msg = Message(
@@ -1687,18 +1812,38 @@ async def iterate_shot(
         dedup_id = hashlib.sha256(
             f"generate_images_nano_banana:iterate:{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()
+
+        logger.info(
+            "Sending SQS iterate message (queue=%s fifo=%s group=%s dedup=%s): %s",
+            queue_url,
+            is_fifo,
+            group_id,
+            dedup_id,
+            sqs_body,
+        )
+
         try:
             sqs_msg_id = await asyncio.to_thread(
                 _sync_send, queue_url, body_str, group_id, dedup_id, is_fifo
             )
+            logger.info(
+                "SQS iterate message sent (msg_id=%s execution=%s shot=%s)",
+                sqs_msg_id,
+                ctx_id,
+                shot_doc_id,
+            )
         except Exception:
-            pass
+            logger.exception(
+                "Failed to send SQS iterate message (execution=%s shot=%s)",
+                ctx_id,
+                shot_doc_id,
+            )
 
     return {
         "status": "sent",
         "message_id": str(msg.id),
         "sqs_message_id": sqs_msg_id,
-        "shot_id": str(shot.id),
+        "shot_id": str(raw["_id"]),
         "action": "iterate",
     }
 
@@ -1710,12 +1855,7 @@ async def retry_shot(
     body: ShotRetryBody,
     user: User = Depends(get_current_user),
 ):
-    """Retry a specific shot — re-generate with existing references.
-
-    Builds an SQS message with action='retry' and a retry_payload
-    containing the shot's character/location/previous references.
-    Also saves a Message record for auditability.
-    """
+    """Retry a specific shot — re-generate with existing references."""
     _, ctx_id = await _resolve_ctx_id(execution_id)
 
     try:
@@ -1723,51 +1863,73 @@ async def retry_shot(
     except Exception:
         raise HTTPException(400, "Invalid shot_doc_id")
 
-    shot = await Shot.get(doc_oid)
-    if not shot or str(shot.execution_id) != str(ctx_id):
+    # Use raw pymongo query to bypass Pydantic validation on partial/legacy docs
+    motor_col = Shot.get_pymongo_collection()
+    raw = await motor_col.find_one({"_id": doc_oid})
+    if not raw:
+        raise HTTPException(404, f"Shot '{shot_doc_id}' not found")
+    raw_exec_id = raw.get("executionId") or raw.get("execution_id") or ""
+    if str(raw_exec_id) != str(ctx_id):
         raise HTTPException(404, f"Shot '{shot_doc_id}' not found in this execution")
 
+    shot = _normalize_shot_row(raw)
+
     step_key = ["generate_images_nano_banana"]
-    org_id = body.org_id or str(getattr(shot, "org_id", "") or "")
-    project_id = body.project_id or str(getattr(shot, "project_id", "") or "")
-    episode_id = body.episode_id or str(getattr(shot, "episode_id", "") or "")
-    part_id = body.part_id or str(getattr(shot, "part_id", "") or "")
+    org_id = body.org_id or str(raw.get("orgId") or raw.get("org_id") or "")
+    project_id = body.project_id or str(raw.get("projectId") or raw.get("project_id") or "")
+    episode_id = body.episode_id or str(raw.get("episodeId") or raw.get("episode_id") or "")
+    part_id = body.part_id or str(raw.get("partId") or raw.get("part_id") or "")
+
+    shot_meta = shot.get("shotMetadata") or {}
+    shot_num = shot_meta.get("shotNumber") or shot.get("sequenceNo") or 1
+
+    start_image_prompt = (
+        body.start_image_prompt
+        if body.start_image_prompt is not None
+        else shot.get("startImagePrompt") or ""
+    )
 
     retry_payload: Dict[str, Any] = {
-        "shot_number": shot.shot_metadata.shot_number if shot.shot_metadata else shot.sequence_no,
-        "base_shot_id": str(shot.id),
-        "start_image_prompt": shot.start_image_prompt,
+        "shot_number": shot_num,
+        "base_shot_id": str(raw["_id"]),
+        "start_image_prompt": start_image_prompt,
     }
 
     # character_references
     char_refs = []
-    for ref in (shot.character_references or []):
+    for ref in (shot.get("characterReferences") or []):
+        if not isinstance(ref, dict):
+            continue
         char_refs.append({
-            "character_id": ref.character_id or "",
-            "reference_image": ref.reference_image or "",
-            "display_name": ref.display_name,
-            "aws_url": ref.aws_url,
+            "character_id": ref.get("characterId") or "",
+            "reference_image": ref.get("referenceImage") or "",
+            "display_name": ref.get("displayName") or "",
+            "aws_url": ref.get("awsUrl") or "",
         })
     retry_payload["character_references"] = char_refs
 
     # location_references
     loc_refs = []
-    for ref in (shot.location_references or []):
+    for ref in (shot.get("locationReferences") or []):
+        if not isinstance(ref, dict):
+            continue
         loc_refs.append({
-            "location_id": ref.location_id or "",
-            "reference_image": ref.reference_image or "",
-            "display_name": ref.display_name,
-            "aws_url": ref.aws_url,
+            "location_id": ref.get("locationId") or "",
+            "reference_image": ref.get("referenceImage") or "",
+            "display_name": ref.get("displayName") or "",
+            "aws_url": ref.get("awsUrl") or "",
         })
     retry_payload["location_references"] = loc_refs
 
     # previous_references
     prev_refs = []
-    for ref in (shot.previous_references or []):
+    for ref in (shot.get("previousReferences") or []):
+        if not isinstance(ref, dict):
+            continue
         prev_refs.append({
-            "reference_image": ref.reference_image,
-            "display_name": ref.display_name,
-            "aws_url": ref.aws_url,
+            "reference_image": ref.get("referenceImage") or "",
+            "display_name": ref.get("displayName") or "",
+            "aws_url": ref.get("awsUrl") or "",
         })
     retry_payload["previous_references"] = prev_refs
 
@@ -1786,6 +1948,13 @@ async def retry_shot(
         "createdAt": datetime.now(timezone.utc).isoformat(),
         "retry_payload": retry_payload,
     }
+
+    logger.info(
+        "SQS retry message built (execution=%s shot=%s): %s",
+        ctx_id,
+        shot_doc_id,
+        sqs_body,
+    )
 
     # Save Message record
     msg = Message(
@@ -1817,18 +1986,38 @@ async def retry_shot(
         dedup_id = hashlib.sha256(
             f"generate_images_nano_banana:retry:{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()
+
+        logger.info(
+            "Sending SQS retry message (queue=%s fifo=%s group=%s dedup=%s): %s",
+            queue_url,
+            is_fifo,
+            group_id,
+            dedup_id,
+            sqs_body,
+        )
+
         try:
             sqs_msg_id = await asyncio.to_thread(
                 _sync_send, queue_url, body_str, group_id, dedup_id, is_fifo
             )
+            logger.info(
+                "SQS retry message sent (msg_id=%s execution=%s shot=%s)",
+                sqs_msg_id,
+                ctx_id,
+                shot_doc_id,
+            )
         except Exception:
-            pass
+            logger.exception(
+                "Failed to send SQS retry message (execution=%s shot=%s)",
+                ctx_id,
+                shot_doc_id,
+            )
 
     return {
         "status": "sent",
         "message_id": str(msg.id),
         "sqs_message_id": sqs_msg_id,
-        "shot_id": str(shot.id),
+        "shot_id": str(raw["_id"]),
         "action": "retry",
     }
 

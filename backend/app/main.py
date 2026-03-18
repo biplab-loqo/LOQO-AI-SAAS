@@ -7,6 +7,17 @@ from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
+# Ensure our named loggers emit INFO+ output by default (useful when Uvicorn
+# or other runners don't configure a root logger for application loggers).
+loqo_logger = logging.getLogger("loqo")
+if not loqo_logger.hasHandlers():
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    )
+    loqo_logger.addHandler(handler)
+loqo_logger.setLevel(logging.INFO)
+
 from app.core.config import settings
 from app.api.v1 import api_v1_router
 from app.db.mongodb import init_db, close_db

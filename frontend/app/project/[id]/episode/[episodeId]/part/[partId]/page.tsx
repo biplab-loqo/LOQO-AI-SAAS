@@ -1899,6 +1899,21 @@ type PanelTask =
   | { mode: 'edit'; targetType: 'card'; card: EditingCard; label: string }
   | null
 
+/** s3://bucket/key → https://bucket.s3.amazonaws.com/key (pass-through for non-S3 URIs) */
+function s3UriToHttp(url: string): string {
+  if (!url || !url.startsWith('s3://')) return url
+  const rest = url.slice(5)
+  const slash = rest.indexOf('/')
+  if (slash < 0) return url
+  return `https://${rest.slice(0, slash)}.s3.amazonaws.com/${rest.slice(slash + 1)}`
+}
+
+/** https://bucket.s3[.region].amazonaws.com/key → s3://bucket/key (pass-through for others) */
+function httpToS3Uri(url: string): string {
+  const m = url.match(/^https?:\/\/([^.]+)\.s3(?:\.[a-z0-9-]+)?\.amazonaws\.com\/(.+)$/i)
+  return m ? `s3://${m[1]}/${m[2]}` : url
+}
+
 function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen, onToggle, panelTask, onCancelTask, onSaveEditCard, bibleData }: {
   executionId: string
   orgId?: string; projectId?: string; episodeId?: string; partId?: string
@@ -1942,13 +1957,13 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
     if (panelTask.targetType === 'shot' && panelTask.mode === 'edit') {
       const shot = panelTask.item
       setEditDraft({ startImagePrompt: shot.startImagePrompt ?? '' })
-      setCharRefs((shot.characterReferences ?? []).map(r => ({ awsUrl: r.awsUrl, displayName: r.displayName })))
-      setLocRefs((shot.locationReferences ?? []).map(r => ({ awsUrl: r.awsUrl, displayName: r.displayName })))
+      setCharRefs((shot.characterReferences ?? []).map(r => ({ awsUrl: r.awsUrl ?? '', displayName: r.displayName ?? 'Image' })))
+      setLocRefs((shot.locationReferences ?? []).map(r => ({ awsUrl: r.awsUrl ?? '', displayName: r.displayName ?? 'Image' })))
       setClipInputImgs([])
     } else if (panelTask.targetType === 'clip' && panelTask.mode === 'edit') {
       const clip = panelTask.item
       setEditDraft({ animationPrompt: clip.animationPrompt ?? '' })
-      setClipInputImgs((clip.inputImages ?? []).map(img => ({ awsUrl: img.awsUrl, displayName: img.displayName })))
+      setClipInputImgs((clip.inputImages ?? []).map(img => ({ awsUrl: img.awsUrl ?? '', displayName: img.displayName ?? 'Image' })))
       setCharRefs([])
       setLocRefs([])
     } else if (panelTask.targetType === 'card') {
@@ -2090,8 +2105,8 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
                   <div className="grid grid-cols-3 gap-1.5">
                     {charRefs.map((ref, i) => (
                       <div key={ref.awsUrl + i} className="relative rounded-lg overflow-hidden aspect-square border border-border/20 bg-black/10 group/ref">
-                        <img src={ref.awsUrl} alt={ref.displayName} loading="lazy" className="w-full h-full object-cover" />
-                        <button onClick={() => viewImage(charRefs.map(r => r.awsUrl), i)}
+                        <img src={s3UriToHttp(ref.awsUrl)} alt={ref.displayName} loading="lazy" className="w-full h-full object-cover" />
+                        <button onClick={() => viewImage(charRefs.map(r => s3UriToHttp(r.awsUrl)), i)}
                           className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/ref:opacity-100 transition-opacity">
                           <Eye size={14} className="text-white" />
                         </button>
@@ -2110,7 +2125,7 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
                   onDrop={e => {
                     e.preventDefault(); setCharDragOver(false)
                     const url = e.dataTransfer.getData('text/plain')
-                    if (url) setCharRefs(prev => [...prev, { awsUrl: url, displayName: url.split('/').pop()?.split('?')[0] ?? 'Image' }])
+                    if (url) setCharRefs(prev => [...prev, { awsUrl: httpToS3Uri(url), displayName: url.split('/').pop()?.split('?')[0] ?? 'Image' }])
                   }}
                   className={cn('rounded-lg border-2 border-dashed flex items-center justify-center py-3 gap-1.5 transition-all text-[11px] font-medium cursor-default',
                     charDragOver ? 'border-accent bg-accent/10 text-accent' : 'border-border/60 text-foreground/70 hover:border-accent/30')}
@@ -2126,8 +2141,8 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
                   <div className="grid grid-cols-3 gap-1.5">
                     {locRefs.map((ref, i) => (
                       <div key={ref.awsUrl + i} className="relative rounded-lg overflow-hidden aspect-square border border-border/20 bg-black/10 group/ref">
-                        <img src={ref.awsUrl} alt={ref.displayName} loading="lazy" className="w-full h-full object-cover" />
-                        <button onClick={() => viewImage(locRefs.map(r => r.awsUrl), i)}
+                        <img src={s3UriToHttp(ref.awsUrl)} alt={ref.displayName} loading="lazy" className="w-full h-full object-cover" />
+                        <button onClick={() => viewImage(locRefs.map(r => s3UriToHttp(r.awsUrl)), i)}
                           className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/ref:opacity-100 transition-opacity">
                           <Eye size={14} className="text-white" />
                         </button>
@@ -2146,7 +2161,7 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
                   onDrop={e => {
                     e.preventDefault(); setLocDragOver(false)
                     const url = e.dataTransfer.getData('text/plain')
-                    if (url) setLocRefs(prev => [...prev, { awsUrl: url, displayName: url.split('/').pop()?.split('?')[0] ?? 'Image' }])
+                    if (url) setLocRefs(prev => [...prev, { awsUrl: httpToS3Uri(url), displayName: url.split('/').pop()?.split('?')[0] ?? 'Image' }])
                   }}
                   className={cn('rounded-lg border-2 border-dashed flex items-center justify-center py-3 gap-1.5 transition-all text-[11px] font-medium cursor-default',
                     locDragOver ? 'border-accent bg-accent/10 text-accent' : 'border-border/60 text-foreground/70 hover:border-accent/30')}
@@ -2239,8 +2254,8 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
                   <div className="grid grid-cols-3 gap-1.5">
                     {clipInputImgs.map((img, i) => (
                       <div key={img.awsUrl + i} className="relative rounded-lg overflow-hidden aspect-square border border-border/20 bg-black/10 group/ref">
-                        <img src={img.awsUrl} alt={img.displayName} loading="lazy" className="w-full h-full object-cover" />
-                        <button onClick={() => viewImage(clipInputImgs.map(im => im.awsUrl), i)}
+                        <img src={s3UriToHttp(img.awsUrl)} alt={img.displayName} loading="lazy" className="w-full h-full object-cover" />
+                        <button onClick={() => viewImage(clipInputImgs.map(im => s3UriToHttp(im.awsUrl)), i)}
                           className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/ref:opacity-100 transition-opacity">
                           <Eye size={14} className="text-white" />
                         </button>
@@ -2259,7 +2274,7 @@ function AIRightPanel({ executionId, orgId, projectId, episodeId, partId, isOpen
                   onDrop={e => {
                     e.preventDefault(); setClipImgDragOver(false)
                     const url = e.dataTransfer.getData('text/plain')
-                    if (url) setClipInputImgs(prev => [...prev, { awsUrl: url, displayName: url.split('/').pop()?.split('?')[0] ?? 'Image' }])
+                    if (url) setClipInputImgs(prev => [...prev, { awsUrl: httpToS3Uri(url), displayName: url.split('/').pop()?.split('?')[0] ?? 'Image' }])
                   }}
                   className={cn('rounded-lg border-2 border-dashed flex items-center justify-center py-3 gap-1.5 transition-all text-[11px] font-medium cursor-default',
                     clipImgDragOver ? 'border-accent bg-accent/10 text-accent' : 'border-border/60 text-foreground/70 hover:border-accent/30')}

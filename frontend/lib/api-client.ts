@@ -206,16 +206,16 @@ export interface RichAnimationRef {
 
 export interface ShotMediaRefOut {
   objectId?: string | null
-  displayName: string
-  awsUrl: string
+  displayName?: string
+  awsUrl?: string
 }
 
 export interface ShotReferenceOut {
   characterId?: string
   locationId?: string
-  referenceImage: string
-  displayName: string
-  awsUrl: string
+  referenceImage?: string
+  displayName?: string
+  awsUrl?: string
 }
 
 export interface ShotOut {

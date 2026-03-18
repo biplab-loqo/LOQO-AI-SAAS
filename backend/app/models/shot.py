@@ -1,6 +1,6 @@
 """Shot document — independent shot table."""
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, Field
@@ -15,27 +15,26 @@ class ShotMediaRef(BaseModel):
 
 class CharacterReference(BaseModel):
     character_id: Optional[str] = Field(None, alias="characterId")
-    # Stored as a single string or a list of strings depending on generation version
-    reference_image: Optional[Union[str, List[str]]] = Field(None, alias="referenceImage")
+    reference_image: Optional[str] = Field(None, alias="referenceImage")
     display_name: str = Field(..., alias="displayName")
-    aws_url: Union[str, List[str]] = Field(..., alias="awsUrl")
+    aws_url: Optional[str] = Field(None, alias="awsUrl")
 
     model_config = {"populate_by_name": True}
 
 
 class LocationReference(BaseModel):
     location_id: Optional[str] = Field(None, alias="locationId")
-    reference_image: Optional[Union[str, List[str]]] = Field(None, alias="referenceImage")
+    reference_image: Optional[str] = Field(None, alias="referenceImage")
     display_name: str = Field(..., alias="displayName")
-    aws_url: Union[str, List[str]] = Field(..., alias="awsUrl")
+    aws_url: Optional[str] = Field(None, alias="awsUrl")
 
     model_config = {"populate_by_name": True}
 
 
 class PreviousReference(BaseModel):
-    reference_image: Union[str, List[str]] = Field(..., alias="referenceImage")
+    reference_image: Optional[str] = Field(None, alias="referenceImage")
     display_name: str = Field(..., alias="displayName")
-    aws_url: Union[str, List[str]] = Field(..., alias="awsUrl")
+    aws_url: Optional[str] = Field(None, alias="awsUrl")
 
     model_config = {"populate_by_name": True}
 
@@ -70,15 +69,15 @@ class ShotExecutionMetadata(BaseModel):
 
 class Shot(Document):
     # Identity + hierarchy
-    execution_id: PydanticObjectId = Field(..., alias="executionId")
+    execution_id: Optional[PydanticObjectId] = Field(None, alias="executionId")
     org_id: Optional[str] = Field(None, alias="orgId")
     project_id: Optional[str] = Field(None, alias="projectId")
     episode_id: Optional[str] = Field(None, alias="episodeId")
     part_id: Optional[str] = Field(None, alias="partId")
 
-    # Requested required fields
-    shot_id: str = Field(..., alias="shotId")
-    sequence_no: int = Field(..., alias="sequenceNo")
+    # Requested required fields — all defaulted to allow partial/legacy documents
+    shot_id: Optional[str] = Field(None, alias="shotId")
+    sequence_no: int = Field(0, alias="sequenceNo")
     version: int = 1
     is_approved: bool = Field(False, alias="isApproved")
 
@@ -86,15 +85,17 @@ class Shot(Document):
     character_references: List[CharacterReference] = Field(default_factory=list, alias="characterReferences")
     previous_references: List[PreviousReference] = Field(default_factory=list, alias="previousReferences")
     location_references: List[LocationReference] = Field(default_factory=list, alias="locationReferences")
-    shot_metadata: ShotMetadata = Field(..., alias="shotMetadata")
-    one_liner_shot_intent: str = Field(..., alias="oneLinerShotIntent")
-    start_image_prompt: str = Field(..., alias="startImagePrompt")
-    animation_prompt: Optional[str] = Field(None, alias="animationPrompt")  # Optional: clips have this, shots may not
+    shot_metadata: Optional[ShotMetadata] = Field(None, alias="shotMetadata")
+    one_liner_shot_intent: str = Field("", alias="oneLinerShotIntent")
+    start_image_prompt: str = Field("", alias="startImagePrompt")
+    animation_prompt: Optional[str] = Field(None, alias="animationPrompt")
     start_image: Optional[ShotMediaRef] = Field(None, alias="startImage")
     execution_metadata: ShotExecutionMetadata = Field(default_factory=ShotExecutionMetadata, alias="executionMetadata")
 
     created_at: datetime = Field(default_factory=datetime.utcnow, alias="createdAt")
     updated_at: datetime = Field(default_factory=datetime.utcnow, alias="updatedAt")
+
+    model_config = {"populate_by_name": True}
 
     class Settings:
         name = "shots"
