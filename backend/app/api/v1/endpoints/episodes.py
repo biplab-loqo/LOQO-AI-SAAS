@@ -314,3 +314,27 @@ async def get_episode_locations(
         d = _normalize_media_refs(d)
         out.append(d)
     return out
+
+
+# ── GET /episodes/{episode_id}/show-bible ─────────────────────────────────────
+
+@router.get("/{episode_id}/show-bible")
+async def get_episode_show_bible(
+    episode_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Return the execution-config show bible for a specific episode."""
+    await _require_org(current_user)
+
+    ep = await Episode.get(episode_id)
+    if not ep:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    # executionConfig stores episode-level show bible entries keyed by
+    # entity_type='episode' and episode_id.
+    col = Episode.get_pymongo_collection().database["executionConfig"]
+    doc = await col.find_one({"entity_type": "episode", "episode_id": str(ep.id)})
+    if not doc or "show_bible" not in doc:
+        raise HTTPException(status_code=404, detail="Show bible not found")
+
+    return {"showBible": _to_jsonable(doc.get("show_bible"))}

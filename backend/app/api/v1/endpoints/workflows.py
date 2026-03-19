@@ -1584,8 +1584,50 @@ async def approve_shot_version(
         raise HTTPException(400, "Invalid shot_doc_id — must be a valid ObjectId")
 
     target = await Shot.get(doc_oid)
-    if not target or str(target.execution_id) != str(ctx_id):
-        raise HTTPException(404, f"Shot version '{shot_doc_id}' not found in this execution")
+    target_matches = bool(target and str(target.execution_id) == str(ctx_id))
+
+    if not target_matches:
+        # Legacy documents may store execution id as `execution_id` (snake_case).
+        # If the Beanie model didn't map it, fall back to a raw pymongo lookup.
+        motor_col = Shot.get_pymongo_collection()
+        ctx_str = str(ctx_id)
+        raw = await motor_col.find_one(
+            {
+                "_id": doc_oid,
+                "$or": [
+                    {"executionId": ctx_id},
+                    {"executionId": ctx_str},
+                    {"execution_id": ctx_id},
+                    {"execution_id": ctx_str},
+                ],
+            }
+        )
+        if not raw:
+            raise HTTPException(404, f"Shot version '{shot_doc_id}' not found in this execution")
+
+        # Update the raw document in-place (heurstic for legacy naming)
+        now = datetime.now(timezone.utc)
+        await motor_col.update_one(
+            {"_id": doc_oid},
+            {
+                "$set": {
+                    "isApproved": True,
+                    "is_approved": True,
+                    "updatedAt": now,
+                    "updated_at": now,
+                }
+            },
+        )
+
+        # Normalize for response
+        raw["isApproved"] = True
+        raw["is_approved"] = True
+        raw["updatedAt"] = now
+        raw["updated_at"] = now
+        d = _normalize_shot_row(_to_jsonable(raw))
+        d["id"] = str(raw.get("_id"))
+        d["executionId"] = str(ctx_id)
+        return d
 
     now = datetime.now(timezone.utc)
 
@@ -1634,8 +1676,46 @@ async def unapprove_shot_version(
         raise HTTPException(400, "Invalid shot_doc_id — must be a valid ObjectId")
 
     target = await Shot.get(doc_oid)
-    if not target or str(target.execution_id) != str(ctx_id):
-        raise HTTPException(404, f"Shot version '{shot_doc_id}' not found in this execution")
+    target_matches = bool(target and str(target.execution_id) == str(ctx_id))
+
+    if not target_matches:
+        motor_col = Shot.get_pymongo_collection()
+        ctx_str = str(ctx_id)
+        raw = await motor_col.find_one(
+            {
+                "_id": doc_oid,
+                "$or": [
+                    {"executionId": ctx_id},
+                    {"executionId": ctx_str},
+                    {"execution_id": ctx_id},
+                    {"execution_id": ctx_str},
+                ],
+            }
+        )
+        if not raw:
+            raise HTTPException(404, f"Shot version '{shot_doc_id}' not found in this execution")
+
+        now = datetime.now(timezone.utc)
+        await motor_col.update_one(
+            {"_id": doc_oid},
+            {
+                "$set": {
+                    "isApproved": False,
+                    "is_approved": False,
+                    "updatedAt": now,
+                    "updated_at": now,
+                }
+            },
+        )
+
+        raw["isApproved"] = False
+        raw["is_approved"] = False
+        raw["updatedAt"] = now
+        raw["updated_at"] = now
+        d = _normalize_shot_row(_to_jsonable(raw))
+        d["id"] = str(raw.get("_id"))
+        d["executionId"] = str(ctx_id)
+        return d
 
     now = datetime.now(timezone.utc)
     await Shot.find_one({"_id": doc_oid}).update(

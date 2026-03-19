@@ -774,6 +774,10 @@ export class ApiClient {
     return this.get<LocationOut[]>(`/episodes/${episodeId}/locations`)
   }
 
+  async getEpisodeShowBible(episodeId: string) {
+    return this.get<{ showBible: Record<string, any> }>(`/episodes/${episodeId}/show-bible`)
+  }
+
   // ── PARTS ─────────────────────────────────────────────────
 
   async getParts(projectId: string, episodeId: string) {

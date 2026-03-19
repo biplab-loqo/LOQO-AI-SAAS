@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ChevronRight, Plus, FileText, Upload, Clapperboard, Layers, ChevronDown, BookOpen } from 'lucide-react'
+import { ChevronRight, Plus, FileText, Upload, Clapperboard, Layers, ChevronDown, BookOpen, Users, MapPin, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { StudioSectionLoader } from '@/components/studio-loading'
 import { motion } from 'framer-motion'
@@ -49,6 +49,11 @@ export default function EpisodePage() {
   const [scriptMode, setScriptMode] = useState<'text' | 'file'>('text')
   const [isProcessing, setIsProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [showBibleOpen, setShowBibleOpen] = useState(false)
+  const [showBible, setShowBible] = useState<Record<string, any> | null>(null)
+  const [showBibleLoading, setShowBibleLoading] = useState(false)
+  const [showBibleError, setShowBibleError] = useState<string | null>(null)
 
   // Workflow templates
   const [templates, setTemplates] = useState<TemplateOption[]>([])
@@ -122,6 +127,20 @@ export default function EpisodePage() {
       router.push(`/project/${projectId}/episode/${episodeId}/part/${createdPart.id}`)
     } catch (error) { console.error('Failed to create part', error); toast.error('Failed to create part') }
     finally { setIsProcessing(false) }
+  }
+
+  const loadShowBible = async () => {
+    if (showBible || showBibleLoading) return
+    setShowBibleLoading(true)
+    try {
+      const res = await apiClient.getEpisodeShowBible(episodeId)
+      setShowBible(res.showBible || null)
+      setShowBibleError(null)
+    } catch (err: any) {
+      setShowBibleError(err?.message || 'Failed to load show bible')
+    } finally {
+      setShowBibleLoading(false)
+    }
   }
 
   if (loading) return <StudioSectionLoader message="Loading episode..." />
@@ -242,8 +261,91 @@ export default function EpisodePage() {
         </div>
       </motion.div>
 
+      {/* Asset Quick Links */}
+      <div className="max-w-5xl mx-auto px-6 py-4">
+        <div>
+          <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-wide mb-2">Assets</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <Dialog open={showBibleOpen} onOpenChange={(open) => {
+            setShowBibleOpen(open)
+            if (open) loadShowBible()
+          }}>
+            <DialogTrigger asChild>
+              <Card className="h-full p-5 rounded-2xl border border-border/40 hover:border-accent/40 hover:bg-accent/[0.06] transition-all cursor-pointer">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                    <BookOpen className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Show Bible</p>
+                    <p className="text-xs text-muted-foreground">Episode-level show bible</p>
+                  </div>
+                </div>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold">Episode Show Bible</DialogTitle>
+                <DialogDescription>Episode-level show bible</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {showBibleLoading ? (
+                  <div className="py-8 text-center">
+                    <Loader2 size={24} className="animate-spin text-accent/70" />
+                    <p className="text-sm text-muted-foreground mt-3">Loading show bible…</p>
+                  </div>
+                ) : showBibleError ? (
+                  <p className="text-sm text-red-500">{showBibleError}</p>
+                ) : showBible ? (
+                  <div className="space-y-3">
+                    {Object.entries(showBible).map(([key, value]) => (
+                      <div key={key} className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-foreground/70">{key.replace(/_/g, ' ')}</p>
+                        <pre className="whitespace-pre-wrap text-sm text-foreground/80 bg-muted/20 rounded-lg p-3">{typeof value === 'string' ? value : JSON.stringify(value, null, 2)}</pre>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No show bible found for this episode.</p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Link href={`/project/${projectId}/episode/${episodeId}/characters`}>
+            <Card className="h-full p-5 rounded-2xl border border-border/40 hover:border-accent/40 hover:bg-accent/[0.06] transition-all cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-violet-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Characters</p>
+                  <p className="text-xs text-muted-foreground">Episode-level character assets</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+          <Link href={`/project/${projectId}/episode/${episodeId}/locations`}>
+            <Card className="h-full p-5 rounded-2xl border border-border/40 hover:border-accent/40 hover:bg-accent/[0.06] transition-all cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Locations</p>
+                  <p className="text-xs text-muted-foreground">Episode-level location assets</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+        </div>
+      </div>
+
       {/* Parts Grid */}
       <div className="max-w-5xl mx-auto px-6 py-6">
+        <h2 className="text-sm font-bold text-foreground/80 uppercase tracking-wide mb-4">Parts</h2>
         {parts.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="p-12 text-center border-dashed rounded-2xl">

@@ -12,8 +12,6 @@ import {
   ChevronDown,
   ChevronRight,
   Zap,
-  UserCircle2,
-  MapPin,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
@@ -453,32 +451,6 @@ export default function ProjectSidebarNew({
                           className="overflow-hidden"
                         >
                           <div className="space-y-1.5 pr-2">
-                            {/* Assets section */}
-                            <div className="w-4/5 ml-auto px-3 pt-2 pb-1 space-y-1">
-                              <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-wider block mb-1.5">Assets</span>
-                              <Link href={`${epHref}/characters`} className="block">
-                                <div className={cn(
-                                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
-                                  pathname.includes(`/episode/${ep.id}/characters`)
-                                    ? "bg-violet-500/15 text-violet-400"
-                                    : "text-foreground/60 hover:text-foreground hover:bg-muted/50"
-                                )}>
-                                  <UserCircle2 size={14} className="flex-shrink-0" />
-                                  <span>Characters</span>
-                                </div>
-                              </Link>
-                              <Link href={`${epHref}/locations`} className="block">
-                                <div className={cn(
-                                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
-                                  pathname.includes(`/episode/${ep.id}/locations`)
-                                    ? "bg-emerald-500/15 text-emerald-400"
-                                    : "text-foreground/60 hover:text-foreground hover:bg-muted/50"
-                                )}>
-                                  <MapPin size={14} className="flex-shrink-0" />
-                                  <span>Locations</span>
-                                </div>
-                              </Link>
-                            </div>
 
                             {ep.parts.length === 0 ? (
                               <div className="w-4/5 ml-auto px-4 py-3 text-xs text-foreground/40 text-center bg-muted/20 rounded-md border border-border/20">

@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
-import { Users2, ChevronLeft, Loader2, ImageIcon, Eye, Download } from 'lucide-react'
+import { Users2, Loader2, ImageIcon, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { apiClient, type CharacterOut } from '@/lib/api-client'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -136,11 +135,6 @@ export default function CharactersPage() {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center gap-3 px-6 py-4 border-b border-border/30 bg-background">
-        <Link href={`/project/${projectId}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm">
-          <ChevronLeft size={16} />
-          Back
-        </Link>
-        <div className="w-px h-5 bg-border/40" />
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center">
             <Users2 className="w-5 h-5 text-violet-400" />
